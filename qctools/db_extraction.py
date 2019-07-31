@@ -10,6 +10,8 @@
 #                  measurements only 'results', makes it more descriptive. Default: False
 # newline_slowaxes: Adds a newline on all slowaxes, works in infinte dimensions, i.e., cube measurements and higher. Default: True
 #
+import qcodes as qc
+from qcodes import initialise_database
 
 def db_extractor(dbloc=None, 
                  extractpath=None, 
@@ -17,7 +19,8 @@ def db_extractor(dbloc=None,
                  overwrite = False,
                  timestamp = True, 
                  paramtofilename = False,
-                 newline_slowaxes = True):
+                 newline_slowaxes = True,
+                 no_folders = False):
     import os
     import numpy as np
     import json
@@ -29,6 +32,7 @@ def db_extractor(dbloc=None,
         return;
     
     configuration = qc.config
+    previously_opened_db = configuration['core']['db_location']
     configuration['core']['db_location'] = dbloc
     #configuration['core']['db_location'] = r'D:\Switchdrive\CdAs\Data\20190328_MO_Cd3As2_Batch2AB\20190328_MO_Cd3As2_Batch2AB.db'
     configuration.save_to_home()
@@ -40,13 +44,12 @@ def db_extractor(dbloc=None,
         exp = qc.load_experiment(i)
         expname = exp.name
         samplename = exp.sample_name
-        folderstring = f'Exp_' + str(i) + f'_{samplename}_{expname}'
+        folderstring = f'Exp' + '{:02d}'.format(i) + f'({expname})' + '-Sample' + f'({samplename})'
         nmeas = exp.last_counter
         if extractpath != None:
             dbpath = extractpath 
         else:
             dbpath = exp.path_to_db
-            
         #Looping through all runs inside experiment
         for j in range(1,nmeas+1):
             run = exp.data_set(j)
@@ -59,12 +62,12 @@ def db_extractor(dbloc=None,
             
                 # Adding optional file folder settings
                 if timestamp:
-                    timestampcut = str(run.run_timestamp()).replace(":", "").replace("-", "").replace(" ","_")
+                    timestampcut = str(run.run_timestamp()).replace(":", "").replace("-", "").replace(" ","-")
                 else:
                     timestampcut = ''
                 
                 if paramtofilename:
-                    runparams = run.parameters
+                    runparams = '_' + run.parameters
                 else:
                     runparams = ''                
                 
@@ -106,15 +109,33 @@ def db_extractor(dbloc=None,
                     
                     #If number of files > 1, add a number in front
                     if len(result_dict) > 1:
-                        filenamep2 = str(n) + "_" + run.name + "_" + runparams + ".dat"
+                        filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
                         filenamejson = str(n) + "_" + "run_snapshot.json"
                     else:
                         filenamep2 = run.name + "_" + runparams + ".dat"
                         filenamejson = "run_snapshot.json"
                     
                     #Constructing final filepath
-                    filenamep1 = "{:03d}".format(runid) + '_' + timestampcut + "_" + run.name 
-                    folder = os.path.join(os.path.split(dbpath)[0],folderstring,filenamep1)                    
+                    filenamep1 = "{:03d}".format(runid) + '_' + timestampcut + '_' + run.name 
+                    if no_folders == True:
+                        #If number of files > 1, add a number in front
+                        if len(result_dict) > 1:
+                            filenamep2 = str(runid) + '-' + str(n) + "_" + run.name + runparams + ".dat"
+                            filenamejson = str(runid) + '-' + str(n) + "_" + "run_snapshot.json"
+                        else:
+                            filenamep2 = str(runid) + '-' + run.name + "_" + runparams + ".dat"
+                            filenamejson = str(runid) + '-' + "run_snapshot.json"
+                        folder = (dbpath.split('.')[0])
+                    else:
+                        #If number of files > 1, add a number in front
+                        if len(result_dict) > 1:
+                            filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
+                            filenamejson = str(n) + "_" + "run_snapshot.json"
+                        else:
+                            filenamep2 = run.name + "_" + runparams + ".dat"
+                            filenamejson = "run_snapshot.json"
+                        folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)                    
+                    
                     folder = folder.replace(" ", "_")
                     filenamep2 = filenamep2.replace(" ", "_")
                     filenamejson = filenamejson.replace(" ", "_")
@@ -160,12 +181,8 @@ def db_extractor(dbloc=None,
                             measdata = run.get_parameter_data(param_names[k])
                             run_matrix.append(measdata[param_names[k]][param_names[k]])
                             headernames += parameters[k].name + "\t"
-                            #headerlabels += parameters[k].label + "\t"
-                            #headerunits += parameters[k].unit + "\t"
                             headerlabelsandunits += parameters[k].label + " (" + parameters[k].unit +")" + "\t"
                         header += headernames + '\n'
-                        #header += headerlabels + '\n'
-                        #header += headerunits + '\n'
                         header += headerlabelsandunits
                         # Stick'em together
                         run_matrix = np.vstack(run_matrix)
@@ -195,7 +212,6 @@ def db_extractor(dbloc=None,
                                 f.write("\n")
                         f.close()
                         
-                        # np.savetxt(fullpath, run_matrix,  delimiter='\t', header=header)
                         # Saving of snapshot + run description to JSON file
                         with open(fullpathjson, 'w') as f:
                             total_json = {**run.description.serialize(), **run.snapshot}
