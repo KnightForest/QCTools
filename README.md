@@ -14,9 +14,11 @@ lives. Any editing done will immediately carry over.
 
 
 ## Usage
-
-### sdf
+Requires QCodes for obvious reasons. 
+To make all functions available, run:
 ```python
 import imp
-
+import qctools as qct
+from qctools.db_extraction import db_extractor
+from qctools.doNd import do1d,do1d_settle,do2d,do2d_settle
 ```
