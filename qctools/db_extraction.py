@@ -8,11 +8,12 @@
 # timestamp: If True, adds timestamp to foldername per run. Default: True
 # paramtofilename: If True, adds all parameter names to the run filename. Especially handy for people who named their
 #                  measurements only 'results', makes it more descriptive. Default: False
+# no_folders: Creation of folders is supressed. All measurements are put in the same folder with their measurement IDs.
 # newline_slowaxes: Adds a newline on all slowaxes, works in infinte dimensions, i.e., cube measurements and higher. Default: True
 #
 import qcodes as qc
 from qcodes import initialise_database
-
+ 
 def db_extractor(dbloc=None, 
                  extractpath=None, 
                  ids = [],
@@ -20,16 +21,18 @@ def db_extractor(dbloc=None,
                  timestamp = True, 
                  paramtofilename = False,
                  newline_slowaxes = True,
-                 no_folders = False):
+                 no_folders = False,
+                 suppress_output = False):
     import os
     import numpy as np
     import json
     
-    if os.path.isfile(dbloc) and dbloc.endswith('.db'):
-        print('*.db file found, continue to unpack...')
-    else:
-        print('Well, your db file aint where you say it is..')
-        return;
+    if not suppress_output:
+        if os.path.isfile(dbloc) and dbloc.endswith('.db'):
+            print('*.db file found, continue to unpack...')
+        else:
+            print('Well, your db file aint where you say it is..')
+            return;
     
     configuration = qc.config
     previously_opened_db = configuration['core']['db_location']
@@ -120,11 +123,11 @@ def db_extractor(dbloc=None,
                     if no_folders == True:
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
-                            filenamep2 = str(runid) + '-' + str(n) + "_" + run.name + runparams + ".dat"
-                            filenamejson = str(runid) + '-' + str(n) + "_" + "run_snapshot.json"
+                            filenamep2 = '{:03d}'.format(runid) + '-' + str(n) + "_" + run.name + runparams + ".dat"
+                            filenamejson = '{:03d}'.format(runid) + '-' + str(n) + "_" + "run_snapshot.json"
                         else:
-                            filenamep2 = str(runid) + '-' + run.name + "_" + runparams + ".dat"
-                            filenamejson = str(runid) + '-' + "run_snapshot.json"
+                            filenamep2 = '{:03d}'.format(runid) + '-' + run.name + runparams + ".dat"
+                            filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
                         folder = (dbpath.split('.')[0])
                     else:
                         #If number of files > 1, add a number in front
@@ -132,7 +135,7 @@ def db_extractor(dbloc=None,
                             filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
                             filenamejson = str(n) + "_" + "run_snapshot.json"
                         else:
-                            filenamep2 = run.name + "_" + runparams + ".dat"
+                            filenamep2 = run.name + runparams + ".dat"
                             filenamejson = "run_snapshot.json"
                         folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)                    
                     
@@ -189,7 +192,8 @@ def db_extractor(dbloc=None,
                         run_matrix = np.flipud(np.rot90(run_matrix, k=-1, axes=(1,0)))
                         
                         # Confirming function is a good boy
-                        print("Saving measurement with id " + str(runid) +  " to  "+ fullpath)
+                        if not suppress_output:
+                            print("Saving measurement with id " + str(runid) +  " to  "+ fullpath)
                         
                         # Actual saving of file
                         file = fullpath                      
