@@ -1,6 +1,12 @@
+import qcodes as qc
+from qcodes import initialise_database
+import os
+import numpy as np
+import json
+
 # Extract *.db file into conventient folder structure with proper naming. Extracts measurement snapshots if available
 
-# You can pass the function the following attributs:
+# You can pass the function the following attributes:
 # dbloc: give it a full database location
 # extractpath: optional, give it a folder to extract to (has to exist). If empty it uses the dbloc path.
 # ids: optional, array of run ids to extract (i.e. ids = np.arange(2,10) extracts runs 2 to 10). If empty it extracts all
@@ -8,12 +14,9 @@
 # timestamp: If True, adds timestamp to foldername per run. Default: True
 # paramtofilename: If True, adds all parameter names to the run filename. Especially handy for people who named their
 #                  measurements only 'results', makes it more descriptive. Default: False
-# no_folders: Creation of folders is supressed. All measurements are put in the same folder with their measurement IDs.
 # newline_slowaxes: Adds a newline on all slowaxes, works in infinte dimensions, i.e., cube measurements and higher. Default: True
-#
-import qcodes as qc
-from qcodes import initialise_database
- 
+# no_folders: Creation of folders is supressed. All measurements are put in the same folder with their measurement IDs.
+# suppress_output: Suppresses all print commands
 def db_extractor(dbloc=None, 
                  extractpath=None, 
                  ids = [],
@@ -23,9 +26,7 @@ def db_extractor(dbloc=None,
                  newline_slowaxes = True,
                  no_folders = False,
                  suppress_output = False):
-    import os
-    import numpy as np
-    import json
+
     
     if not suppress_output:
         if os.path.isfile(dbloc) and dbloc.endswith('.db'):
