@@ -1,8 +1,10 @@
 import qcodes as qc
 from qcodes import Station, Measurement
+import qctools
+import time
 
 #Basic do1d
-def do1d(param_set, start, stop, num_points, delay, *param_meas, name='', comment=''):
+def do1d(param_set, start, stop, num_points, delay, param_meas, name='', comment=''):
     import numpy as np
     meas = Measurement()
     
@@ -17,7 +19,7 @@ def do1d(param_set, start, stop, num_points, delay, *param_meas, name='', commen
     measparstring = ""
     for parameter in param_meas:
         station.add_component(parameter)
-        measparstring += parameter.full_name + ', '
+        measparstring += parameter.name + ', '
     
     #Sample blowup prevention, patent pending
     if param_set.step == 0 or param_set.step == None:
@@ -31,7 +33,7 @@ def do1d(param_set, start, stop, num_points, delay, *param_meas, name='', commen
     import datetime
     print('Starting run:', name)
     print('Comment:', comment)
-    print('Set axis: ', str(param_set.full_name), 
+    print('Set axis: ', str(param_set.name), 
           '\nReadout parameters: ', str(measparstring), '\n')
     starttime = datetime.datetime.now()
     print('Started: ', starttime)
@@ -71,12 +73,18 @@ def do1d(param_set, start, stop, num_points, delay, *param_meas, name='', commen
     print('Final duration: ', endtime-starttime)
     print('Finished: ', endtime)
     ###
+    qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+                                       ids=[datasaver.run_id], 
+                                       overwrite=True,
+                                       newline_slowaxes=True,
+                                       no_folders=False,
+                                       suppress_output=False)
     return datasaver.run_id  # convenient to have for plotting
 
 #More advanced do1d
 #Waits for a time given by settle_time after setting the setpoint
 #Delay is the time taken to ramp to the next setpoint
-def do1d_settle(param_set, space, delay, settle_time, *param_meas, name='', comment='', autosense=False):
+def do1d_settle(param_set, space, delay, settle_time, param_meas, name='', comment='', autosense=False):
     import numpy as np
     meas = Measurement()    
     
@@ -91,7 +99,7 @@ def do1d_settle(param_set, space, delay, settle_time, *param_meas, name='', comm
     measparstring = ""
     for parameter in param_meas:
         station.add_component(parameter)
-        measparstring += parameter.full_name + ', '
+        measparstring += parameter.name + ', '
     
     #Sample blowup prevention, patent pending
     if param_set.step == 0 or param_set.step == None:
@@ -105,7 +113,7 @@ def do1d_settle(param_set, space, delay, settle_time, *param_meas, name='', comm
     import datetime
     print('Starting run:', name)
     print('Comment:', comment)
-    print('Set axis: ', str(param_set.full_name), 
+    print('Set axis: ', str(param_set.name), 
           '\nReadout parameters: ', str(measparstring), '\n')
     starttime = datetime.datetime.now()
     print('Started: ', starttime)
@@ -135,7 +143,7 @@ def do1d_settle(param_set, space, delay, settle_time, *param_meas, name='', comm
         #                            min_wait=0, min_count=1)
         for set_point in space:
             param_set.set(set_point)
-            sleep(settle_time)
+            time.sleep(settle_time)
             for i, parameter in enumerate(param_meas):
                 output[i][1] = parameter.get()
                 if autosense:
@@ -148,12 +156,18 @@ def do1d_settle(param_set, space, delay, settle_time, *param_meas, name='', comm
     print('Final duration: ', endtime-starttime)
     print('Finished: ', endtime)
     ###
+    qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+                                       ids=[datasaver.run_id], 
+                                       overwrite=True,
+                                       newline_slowaxes=True,
+                                       no_folders=False,
+                                       suppress_output=False)
     return datasaver.run_id
 
     #Basic do2d
 def do2d(param_set1, start1, stop1, num_points1, delay1,
          param_set2, start2, stop2, num_points2, delay2,
-         *param_meas, name='', comment='', fasttozero=True):
+         param_meas, name='', comment='', fasttozero=False):
     # And then run an experiment
     import numpy as np
     meas = Measurement()
@@ -170,18 +184,18 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
     measparstring = ""
     for parameter in param_meas:
         station.add_component(parameter)
-        measparstring += parameter.full_name + ', '
+        measparstring += parameter.name + ', '
     
     #Sample blowup prevention, patent pending
     if param_set1.step == 0 or param_set1.step == None:
         param_set1.step = abs(start1-stop1)/(num_points1-1)
-        print('Warning, \'step\' attribute for set parameter 1 undefined. Defaulting to measurement stepsize :{}'.format(param_set.step) )
+        print('Warning, \'step\' attribute for set parameter 1 undefined. Defaulting to measurement stepsize :{}'.format(param_set1.step) )
     if param_set1.inter_delay == 0 or param_set1.inter_delay == None:
         param_set1.inter_delay = 0.05
         print('Warning, \'inter_delay\' attribute for set parameter 1 undefined. Defaulting to \'0.05\'')
     if param_set2.step == 0 or param_set2.step == None:
         param_set2.step = abs(start2-stop2)/(num_points2-1)
-        print('Warning, \'step\' attribute for set parameter 2 undefined. Defaulting to measurement stepsize :{}'.format(param_set.step) )
+        print('Warning, \'step\' attribute for set parameter 2 undefined. Defaulting to measurement stepsize :{}'.format(param_set2.step) )
     if param_set2.inter_delay == 0 or param_set2.inter_delay == None:
         param_set2.inter_delay = 0.05
         print('Warning, \'inter_delay\' attribute for set parameter 2 undefined. Defaulting to \'0.05\'')
@@ -190,7 +204,7 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
     import datetime
     print('Starting run:', name)
     print('Comment:', comment)
-    print('Fast set axis: ', str(param_set2.full_name), '\nSlow set axis: ', str(param_set1.full_name), 
+    print('Fast set axis: ', str(param_set2.name), '\nSlow set axis: ', str(param_set1.name), 
           '\nReadout parameters: ', str(measparstring), '\n')
     starttime = datetime.datetime.now()
     print('Started: ', starttime)
@@ -230,6 +244,13 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
             #Puts the fast axis back to zero before stepping slow axis.
             if fasttozero == True:
                 param_set2.set(0.0)
+            #Run db_extractor after fast axes is finished
+            qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+                                       ids=[datasaver.run_id], 
+                                       overwrite=True,
+                                       newline_slowaxes=True,
+                                       no_folders=False,
+                                       suppress_output=True)
     dataid = datasaver.run_id  # convenient to have for plotting
     ###
     datasaver.dataset.add_metadata('Comment', comment)
@@ -238,6 +259,12 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
     print('Finished: ', endtime)
 
     ###
+    qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+                                       ids=[datasaver.run_id], 
+                                       overwrite=True,
+                                       newline_slowaxes=True,
+                                       no_folders=False,
+                                       suppress_output=False)
     return dataid
 
 #More advanced do2d
@@ -246,7 +273,7 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
 #        space2 = np.linspace(-2e-6, 2e-6, 1000)
 def do2d_settle(param_set1, space1, delay1, settle_time1, 
                 param_set2, space2, delay2, settle_time2, 
-                *param_meas, name='', comment='', fasttozero=True,autosense=False):
+                param_meas, name='', comment='', fasttozero=False,autosense=False):
     # And then run an experiment
     import numpy as np
     meas = Measurement()
@@ -263,18 +290,18 @@ def do2d_settle(param_set1, space1, delay1, settle_time1,
     measparstring = ""
     for parameter in param_meas:
         station.add_component(parameter)
-        measparstring += parameter.full_name + ', '
+        measparstring += parameter.name + ', '
     
     #Sample blowup prevention, patent pending
     if param_set1.step == 0 or param_set1.step == None:
         param_set1.step = min(abs(np.diff(space1)))
-        print('Warning, \'step\' attribute for set parameter 1 undefined. Defaulting to measurement stepsize :{}'.format(param_set.step) )
+        print('Warning, \'step\' attribute for set parameter 1 undefined. Defaulting to measurement stepsize :{}'.format(param_set1.step) )
     if param_set1.inter_delay == 0 or param_set1.inter_delay == None:
         param_set1.inter_delay = 0.05
         print('Warning, \'inter_delay\' attribute for set parameter 1 undefined. Defaulting to \'0.05\'')
     if param_set2.step == 0 or param_set2.step == None:
         param_set2.step = min(abs(np.diff(space2)))
-        print('Warning, \'step\' attribute for set parameter 2 undefined. Defaulting to measurement stepsize :{}'.format(param_set.step) )
+        print('Warning, \'step\' attribute for set parameter 2 undefined. Defaulting to measurement stepsize :{}'.format(param_set2.step) )
     if param_set2.inter_delay == 0 or param_set2.inter_delay == None:
         param_set2.inter_delay = 0.05
         print('Warning, \'inter_delay\' attribute for set parameter 2 undefined. Defaulting to \'0.05\'')
@@ -283,7 +310,7 @@ def do2d_settle(param_set1, space1, delay1, settle_time1,
     import datetime
     print('Starting run:', name)
     print('Comment:', comment)
-    print('Fast set axis: ', str(param_set2.full_name), '\nSlow set axis: ', str(param_set1.full_name), 
+    print('Fast set axis: ', str(param_set2.name), '\nSlow set axis: ', str(param_set1.name), 
           '\nReadout parameters: ', str(measparstring), '\n')
     starttime = datetime.datetime.now()
     print('Started: ', starttime)
@@ -317,11 +344,11 @@ def do2d_settle(param_set1, space1, delay1, settle_time1,
         for set_point1 in space1:
             param_set1.set(set_point1)
             if space1.tolist().index(set_point1) is not 0: #Do not wait after the first setpoint
-                sleep(settle_time1) #Wait for settle_time1 time (s) after setting the set_point1
+                time.sleep(settle_time1) #Wait for settle_time1 time (s) after setting the set_point1
                            
             for set_point2 in space2:
                 param_set2.set(set_point2)
-                sleep(settle_time2) #Wait for settle_time2 time (s) after setting the set_point2
+                time.sleep(settle_time2) #Wait for settle_time2 time (s) after setting the set_point2
                 for i, parameter in enumerate(param_meas):
                     output[i][1] = parameter.get()
                     if autosense:
@@ -333,12 +360,24 @@ def do2d_settle(param_set1, space1, delay1, settle_time1,
                 param_set2.set(0.0)
             if space1.tolist().index(set_point1) is 0: #Print the time taken for the first inner run
                 print('First Inner Run Finished at ' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            #Run db_extractor after fast axes is finished
+            qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+                                       ids=[datasaver.run_id], 
+                                       overwrite=True,
+                                       newline_slowaxes=True,
+                                       no_folders=False,
+                                       suppress_output=True)
     ###
     datasaver.dataset.add_metadata('Comment', comment)
     endtime = datetime.datetime.now()
     print('Final duration: ', endtime-starttime)
     print('Finished: ', endtime)
-
+    qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+                                       ids=[datasaver.run_id], 
+                                       overwrite=True,
+                                       newline_slowaxes=True,
+                                       no_folders=False,
+                                       suppress_output=True)
     return datasaver.run_id
 
 #Some general lock-in specific functions used in the doND_settle functions
@@ -382,7 +421,7 @@ def decrement_sensitivity_AP(self):
 def auto_sensitivity():
     if np.abs(diff_resistance.get()[2]) <= 0.2*lockin.sensitivity.get() and lockin.sensitivity.get() > 500e-9:
         decrement_sensitivity_AP(lockin)
-        sleep(3*lockin.time_constant.get())
+        time.sleep(3*lockin.time_constant.get())
     elif np.abs(diff_resistance.get()[2]) >= 0.9*lockin.sensitivity.get():
         increment_sensitivity_AP(lockin)
-        sleep(3*lockin.time_constant.get())
+        time.sleep(3*lockin.time_constant.get())
