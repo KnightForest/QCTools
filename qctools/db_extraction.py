@@ -198,7 +198,7 @@ def db_extractor(dbloc=None,
                         
                         # Actual saving of file
                         file = fullpath                      
-                        f = open(file, "w")
+                        f = open(file, "wb")
                         np.savetxt(f,np.array([]), header = header)
 
                         # Routine for properly slicing the slow axes (works for infinite dimensions)
@@ -219,6 +219,13 @@ def db_extractor(dbloc=None,
                         
                         # Saving of snapshot + run description to JSON file
                         with open(fullpathjson, 'w') as f:
-                            total_json = {**run.description.serialize(), **run.snapshot}
+                            if run.snapshot and run.description:
+                                total_json = {**run.description.serialize(), **run.snapshot}
+                            if not run.snapshot:
+                                if run.description:
+                                    total_json = {**run.description.serialize()}
+                                    print('Warning: Measurement {ruinid} has no snapshot.')
+                                else:
+                                    print('Warning: Measurement {ruinid} has no snapshot or run description. Axes for plotting cannot be extracted.')
                             json.dump(total_json, f, indent = 4)
                     n = n + 1
