@@ -214,7 +214,8 @@ def db_extractor(dbloc=None,
                         for i in range(0,len(vsliced)):
                             np.savetxt(f,vsliced[i],delimiter='\t')
                             if i != len(vsliced)-1:
-                                f.write("\n")
+                                linestr = "\n"
+                                f.write(linestr.encode())
                         f.close()
                         
                         # Saving of snapshot + run description to JSON file
