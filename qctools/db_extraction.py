@@ -1,5 +1,6 @@
 import qcodes as qc
 from qcodes import initialise_database
+import qcodes.dataset.descriptions.versioning.serialization as sz
 import os
 import numpy as np
 import json
@@ -220,10 +221,10 @@ def db_extractor(dbloc=None,
                         # Saving of snapshot + run description to JSON file
                         with open(fullpathjson, 'w') as f:
                             if run.snapshot and run.description:
-                                total_json = {**run.description.serialize(), **run.snapshot}
+                                total_json = {**json.loads(sz.to_json_for_storage(run.description)), **run.snapshot}
                             if not run.snapshot:
                                 if run.description:
-                                    total_json = {**run.description.serialize()}
+                                    total_json = {**json.loads(sz.to_json_for_storage(run.description))}
                                     print('Warning: Measurement {ruinid} has no snapshot.')
                                 else:
                                     print('Warning: Measurement {ruinid} has no snapshot or run description. Axes for plotting cannot be extracted.')

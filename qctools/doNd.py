@@ -73,7 +73,7 @@ def do1d(param_set, start, stop, num_points, delay, param_meas, name='', comment
     print('Final duration: ', endtime-starttime)
     print('Finished: ', endtime)
     ###
-    qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+    qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
                                        ids=[datasaver.run_id], 
                                        overwrite=True,
                                        newline_slowaxes=True,
@@ -156,7 +156,7 @@ def do1d_settle(param_set, space, delay, settle_time, param_meas, name='', comme
     print('Final duration: ', endtime-starttime)
     print('Finished: ', endtime)
     ###
-    qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+    qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
                                        ids=[datasaver.run_id], 
                                        overwrite=True,
                                        newline_slowaxes=True,
@@ -245,7 +245,7 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
             if fasttozero == True:
                 param_set2.set(0.0)
             #Run db_extractor after fast axes is finished
-            qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+            qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
                                        ids=[datasaver.run_id], 
                                        overwrite=True,
                                        newline_slowaxes=True,
@@ -259,7 +259,7 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
     print('Finished: ', endtime)
 
     ###
-    qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+    qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
                                        ids=[datasaver.run_id], 
                                        overwrite=True,
                                        newline_slowaxes=True,
@@ -361,7 +361,7 @@ def do2d_settle(param_set1, space1, delay1, settle_time1,
             if space1.tolist().index(set_point1) is 0: #Print the time taken for the first inner run
                 print('First Inner Run Finished at ' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
             #Run db_extractor after fast axes is finished
-            qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+            qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
                                        ids=[datasaver.run_id], 
                                        overwrite=True,
                                        newline_slowaxes=True,
@@ -372,7 +372,7 @@ def do2d_settle(param_set1, space1, delay1, settle_time1,
     endtime = datetime.datetime.now()
     print('Final duration: ', endtime-starttime)
     print('Finished: ', endtime)
-    qctools.db_extraction.db_extractor(dbloc = qc.dataset.database.get_DB_location(), 
+    qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
                                        ids=[datasaver.run_id], 
                                        overwrite=True,
                                        newline_slowaxes=True,
