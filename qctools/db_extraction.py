@@ -115,7 +115,7 @@ def db_extractor(dbloc=None,
                     #If number of files > 1, add a number in front
                     if len(result_dict) > 1:
                         filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
-                        filenamejson = str(n) + "_" + "run_snapshot.json"
+                        filenamejson = "run_snapshot.json"
                     else:
                         filenamep2 = run.name + "_" + runparams + ".dat"
                         filenamejson = "run_snapshot.json"
@@ -126,7 +126,7 @@ def db_extractor(dbloc=None,
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
                             filenamep2 = '{:03d}'.format(runid) + '-' + str(n) + "_" + run.name + runparams + ".dat"
-                            filenamejson = '{:03d}'.format(runid) + '-' + str(n) + "_" + "run_snapshot.json"
+                            filenamejson = '{:03d}'.format(runid) + '-' + ) "run_snapshot.json"
                         else:
                             filenamep2 = '{:03d}'.format(runid) + '-' + run.name + runparams + ".dat"
                             filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
@@ -135,11 +135,11 @@ def db_extractor(dbloc=None,
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
                             filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
-                            filenamejson = str(n) + "_" + "run_snapshot.json"
+                            filenamejson = "run_snapshot.json"
                         else:
                             filenamep2 = run.name + runparams + ".dat"
                             filenamejson = "run_snapshot.json"
-                        folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)                    
+                        folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)
                     
                     folder = folder.replace(" ", "_")
                     filenamep2 = filenamep2.replace(" ", "_")
@@ -165,8 +165,8 @@ def db_extractor(dbloc=None,
                         
                         
                         run_matrix = []    
-                        meas_params = result_dict[i] # Collect measurement params
-                        set_params = depend_dict[i]  # Collect depend params
+                        meas_params = result_dict[0] # Collect measurement params
+                        set_params = depend_dict[0]  # Collect depend params
                         setdata = run.get_parameter_data(param_names[meas_params[0]])
                         headernames = ''
                         #headerlabels = ''
