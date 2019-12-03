@@ -106,8 +106,7 @@ def db_extractor(dbloc=None,
                         for o in range(0,len(deps)):
                             depsind.append(param_names.index(deps[o]))
                         depend_dict.update([(n, depsind)])
-                    n = n + 1
-                    
+                        n = n + 1
                 #Length of final result_dict determines number of files
                 n=0                 
                 for i in range(0,len(result_dict)): # len(result_dict) gives number of independent measurement, i.e. .dat files
@@ -126,7 +125,7 @@ def db_extractor(dbloc=None,
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
                             filenamep2 = '{:03d}'.format(runid) + '-' + str(n) + "_" + run.name + runparams + ".dat"
-                            filenamejson = '{:03d}'.format(runid) + '-' + ) "run_snapshot.json"
+                            filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
                         else:
                             filenamep2 = '{:03d}'.format(runid) + '-' + run.name + runparams + ".dat"
                             filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
@@ -165,8 +164,8 @@ def db_extractor(dbloc=None,
                         
                         
                         run_matrix = []    
-                        meas_params = result_dict[0] # Collect measurement params
-                        set_params = depend_dict[0]  # Collect depend params
+                        meas_params = result_dict[i] # Collect measurement params
+                        set_params = depend_dict[i]  # Collect depend params
                         setdata = run.get_parameter_data(param_names[meas_params[0]])
                         headernames = ''
                         #headerlabels = ''
