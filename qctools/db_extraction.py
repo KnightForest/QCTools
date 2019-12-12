@@ -1,5 +1,6 @@
 import qcodes as qc
 from qcodes import initialise_database
+import qcodes.dataset.descriptions.versioning.serialization as sz
 import os
 import numpy as np
 import json
@@ -105,8 +106,7 @@ def db_extractor(dbloc=None,
                         for o in range(0,len(deps)):
                             depsind.append(param_names.index(deps[o]))
                         depend_dict.update([(n, depsind)])
-                    n = n + 1
-                    
+                        n = n + 1
                 #Length of final result_dict determines number of files
                 n=0                 
                 for i in range(0,len(result_dict)): # len(result_dict) gives number of independent measurement, i.e. .dat files
@@ -114,7 +114,7 @@ def db_extractor(dbloc=None,
                     #If number of files > 1, add a number in front
                     if len(result_dict) > 1:
                         filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
-                        filenamejson = str(n) + "_" + "run_snapshot.json"
+                        filenamejson = "run_snapshot.json"
                     else:
                         filenamep2 = run.name + "_" + runparams + ".dat"
                         filenamejson = "run_snapshot.json"
@@ -125,7 +125,7 @@ def db_extractor(dbloc=None,
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
                             filenamep2 = '{:03d}'.format(runid) + '-' + str(n) + "_" + run.name + runparams + ".dat"
-                            filenamejson = '{:03d}'.format(runid) + '-' + str(n) + "_" + "run_snapshot.json"
+                            filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
                         else:
                             filenamep2 = '{:03d}'.format(runid) + '-' + run.name + runparams + ".dat"
                             filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
@@ -134,11 +134,11 @@ def db_extractor(dbloc=None,
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
                             filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
-                            filenamejson = str(n) + "_" + "run_snapshot.json"
+                            filenamejson = "run_snapshot.json"
                         else:
                             filenamep2 = run.name + runparams + ".dat"
                             filenamejson = "run_snapshot.json"
-                        folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)                    
+                        folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)
                     
                     folder = folder.replace(" ", "_")
                     filenamep2 = filenamep2.replace(" ", "_")
@@ -221,10 +221,10 @@ def db_extractor(dbloc=None,
                         # Saving of snapshot + run description to JSON file
                         with open(fullpathjson, 'w') as f:
                             if run.snapshot and run.description:
-                                total_json = {**run.description.serialize(), **run.snapshot}
+                                total_json = {**json.loads(sz.to_json_for_storage(run.description)), **run.snapshot}
                             if not run.snapshot:
                                 if run.description:
-                                    total_json = {**run.description.serialize()}
+                                    total_json = {**json.loads(sz.to_json_for_storage(run.description))}
                                     print('Warning: Measurement {ruinid} has no snapshot.')
                                 else:
                                     print('Warning: Measurement {ruinid} has no snapshot or run description. Axes for plotting cannot be extracted.')
