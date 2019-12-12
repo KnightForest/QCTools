@@ -2,9 +2,7 @@ import qcodes as qc
 from qcodes import Station, Measurement
 import qctools
 import time
-<<<<<<< HEAD
 import numpy as np
-=======
 
 #Basic do1d
 def do1d(param_set, start, stop, num_points, delay, param_meas, name='', comment=''):
@@ -83,7 +81,6 @@ def do1d(param_set, start, stop, num_points, delay, param_meas, name='', comment
                                        no_folders=False,
                                        suppress_output=False)
     return datasaver.run_id  # convenient to have for plotting
->>>>>>> 83271659f7cca170bef2321a79f1318fb500fa6b
 
 #More advanced do1d
 #Waits for a time given by settle_time after setting the setpoint
@@ -166,8 +163,6 @@ def do1d_settle(param_set, space, delay, settle_time, param_meas, name='', comme
                                        suppress_output=False)
     return datasaver.run_id
 
-<<<<<<< HEAD
-=======
     #Basic do2d
 def do2d(param_set1, start1, stop1, num_points1, delay1,
          param_set2, start2, stop2, num_points2, delay2,
@@ -270,7 +265,7 @@ def do2d(param_set1, start1, stop1, num_points1, delay1,
                                        no_folders=False,
                                        suppress_output=False)
     return dataid
->>>>>>> 83271659f7cca170bef2321a79f1318fb500fa6b
+
 
 #More advanced do2d
 #Modified for custom resolution and to wait for settle_time time after every time set_point is set
