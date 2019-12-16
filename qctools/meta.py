@@ -117,7 +117,7 @@ class diff_R_G_Ibias(qc.MultiParameter):
 #Lock-in auto_sensitivity functions
 def change_sensitivity_AP(self, dn):
     _ = self.sensitivity.get()
-    n = int(self..raw_value)
+    n = int(self.raw_value)
     if self.input_config() in ['a', 'a-b']:
         n_to = self._N_TO_VOLT
     else:

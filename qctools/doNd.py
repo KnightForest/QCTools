@@ -29,7 +29,7 @@ def fill_station(param_set, param_meas):
     return measparstring
 
 def safetyratesdelays(param_set,spaces):
-    #Sample blowup prevention, patent pending
+    #Sample blowup prevention, patent pending, checking and correcting step and inter_delay for all set parameters 
     for i in range(0,len(param_set)):
         if param_set[i].step == 0 or param_set[i].step == None:
             param_set[i].step = np.min(np.absolute(np.diff(spaces[i])[np.where(np.diff(spaces[i])!=0)]))
@@ -59,8 +59,9 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
     # Thread is alive by default
     t.alive = True
 
+    # Create measurement object
     meas = Measurement() 
-
+    # Apply name
     meas.name = name
 
     #Generating setpoints
@@ -68,12 +69,13 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
         setpoints = cartprodmeander(*spaces)
     else:
         setpoints = cartprod(*spaces)
+    
     ### Filling station for snapshotting
     fill_station(param_set,param_meas)
     ### Checking and setting safety rates and delays
     safetyratesdelays(param_set,spaces)    
     
-    meas.write_period = 0.1
+    meas.write_period = 0.5
        
     #Make array showing changes between setpoints on axes
     changesetpoints = setpoints - np.roll(setpoints, 1, axis=0)
@@ -81,47 +83,54 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
     #Forcing the first setpoint in changesetpoints to 1 to make sure it is always set.
     changesetpoints[0,:] = 1
    
-    ### Registering measurement parameters
+    # Registering set parameters
+    param_setstring = ''
     for parameter in param_set:
         meas.register_parameter(parameter)
-        #param_set[i].post_delay = delay[i]
+        param_setstring += parameter.name + ', '
     output = [] 
+    
+    # Registering readout parameters
+    param_measstring = ''
     for parameter in param_meas:
-        #print(param_set)
         meas.register_parameter(parameter, setpoints=(*param_set,))
         output.append([parameter, None])   
-
+        param_measstring += parameter.name + ', '
+    
+    # Start measurement routine
     with meas.run() as datasaver:  
         global measid
         measid = datasaver.run_id
         print(measid)
 
+        # Start various timers
         starttime = datetime.datetime.now()
         lastwrittime = starttime
-        startstring = ' Started - ' + starttime.strftime('%Y-%m-%d %H:%M:%S')
-        print(startstring)  
-        #Getting dimensions and array dimensions and lengths
+        lastprinttime = starttime
+
+        # Getting dimensions and array dimensions and lengths
         ndims = int(len(spaces))
         lenarrays = np.zeros(len(spaces))
         for i in range(0,len(spaces)):
             lenarrays[i] = int(len(spaces[i]))
-            #Main loop for setting values
+        
+        # Main loop for setting values
         for i in range(0,len(setpoints)):
-            #Check for nonzero axis to apply new setpoints
+            #Check for nonzero axis to apply new setpoints by looking in changesetpoints arrays
             resultlist = [None]*ndims
             for j in reversed(range(0,ndims)):
-                if not np.isclose(changesetpoints[i,j] , 0):
+                if not np.isclose(changesetpoints[i,j] , 0): # Only set set params that need to be changed
                     param_set[j].set(setpoints[i,j])
-                    time.sleep(settle_times[j])
-                for k, parameter in enumerate(param_meas):
+                    time.sleep(settle_times[j]) # Apply appropriate settle_time
+                for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
                     output[k][1] = parameter.get()                
-                resultlist[j] = (param_set[j],setpoints[i,j])
-            datasaver.add_result(*resultlist,
+                resultlist[j] = (param_set[j],setpoints[i,j]) # Make a list of result
+            datasaver.add_result(*resultlist, # Add everything to the database
                                  *output)
-            # If alive is set to false
-            if not t.alive:
-                event.set()
-                qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
+            
+            if not t.alive: # Check if user tried to kill the thread by keyboard interrupt, if so kill it
+                event.set() # Trigger closing of run_dbextractor
+                qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(),  # Run db_extractor once more
                                    ids=[measid], 
                                    overwrite=True,
                                    newline_slowaxes=True,
@@ -131,28 +140,33 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
                 # Break out of for loop
                 break
             #Time estimation
-            frac_complete = (i+1)/len(setpoints)
-            duration_in_sec = (datetime.datetime.now()-starttime).total_seconds()/frac_complete
-            elapsed_in_sec = (datetime.datetime.now()-starttime).total_seconds()
-            remaining_in_sec = duration_in_sec-elapsed_in_sec
-            perc_complete = np.round(100*frac_complete,2)
-            progressstring = 'Setpoint ' + str(i) + ' of ' + str(len(setpoints)) + ', ' + str(perc_complete) + ' % complete.'
-            durationstring = '      Total duration - ' + str(datetime.timedelta(seconds=np.round(duration_in_sec)))
-            elapsedstring =  '        Elapsed time - ' +  str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))
-            remainingstring ='      Remaining time - ' + str(datetime.timedelta(seconds=np.round(remaining_in_sec)))
-            etastring =      '     ETA - ' + str((datetime.timedelta(seconds=np.round(duration_in_sec))+starttime).strftime('%Y-%m-%d %H:%M:%S'))
-            #etastring = ' ETA: ' + str(datetime.timedelta(seconds=duration_in_sec+starttime.total_seconds()))
-            totalstring = progressstring + '\n' + startstring + '\n' +  etastring + '\n' + durationstring + '\n' + elapsedstring + '\n' + remainingstring 
-            clear_output(wait=True)
-            print(totalstring)
-            datasaver.dataset.add_metadata('Comment', comment)
-        finishstring =   'Finished - ' + str((datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S'))
+            printinterval = .05 # Reduce printinterval to save CPU
+            if (datetime.datetime.now()-lastprinttime).total_seconds() > printinterval: # Calculate and print time estimation
+                frac_complete = (i+1)/len(setpoints)
+                duration_in_sec = (datetime.datetime.now()-starttime).total_seconds()/frac_complete
+                elapsed_in_sec = (datetime.datetime.now()-starttime).total_seconds()
+                remaining_in_sec = duration_in_sec-elapsed_in_sec
+                perc_complete = np.round(100*frac_complete,2)
+                progressstring = 'Setpoint ' + str(i) + ' of ' + str(len(setpoints)) + ', ' + str(perc_complete) + ' % complete.'
+                durationstring = '      Total duration - ' + str(datetime.timedelta(seconds=np.round(duration_in_sec)))
+                elapsedstring =  '        Elapsed time - ' +  str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))
+                remainingstring ='      Remaining time - ' + str(datetime.timedelta(seconds=np.round(remaining_in_sec)))
+                etastring =      '     ETA - ' + str((datetime.timedelta(seconds=np.round(duration_in_sec))+starttime).strftime('%Y-%m-%d %H:%M:%S'))
+
+                startstring = ' Started - ' + starttime.strftime('%Y-%m-%d %H:%M:%S')
+                runidstring =             '    Starting runid: [' + str(measid) + ']'
+                runnameandcommentstring = '              Name: ' + name + ', Comment: ' + comment
+                setparameterstring =      '  Set parameter(s): ' + str(param_setstring)
+                readoutparameterstring =  'Readout parameters: ' + str(param_measstring)
+                totalstring = runidstring + '\n' + runnameandcommentstring + '\n' + setparameterstring + '\n' + readoutparameterstring + '\n\n' + progressstring + '\n' + startstring + '\n' +  etastring + '\n' + durationstring + '\n' + elapsedstring + '\n' + remainingstring 
+                clear_output(wait=True)
+                print(totalstring)
+                lastprinttime = datetime.datetime.now()
+
+            datasaver.dataset.add_metadata('Comment', comment) # Add comment to metadata in database
+        finishstring =   'Finished - ' + str((datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S')) # Print finishing time
         print(finishstring)
-        event.set()
-            #endtime = datetime.datetime.now()
-            #if space1.tolist().index(set_point1) is 0: #Print the time taken for the first inner run
-            #   print('First Inner Run Finished at ' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-                #Run db_extractor after fast axes is finished
+        event.set() # Trigger closing of run_dbextractor
 
 def run_dbextractor(event,dbextractor_write_interval):
     #Controls how often the measurement is written to *.dat file
@@ -169,7 +183,7 @@ def run_dbextractor(event,dbextractor_write_interval):
                 lastwrittime = datetime.datetime.now()
             except:
                 pass
-        time.sleep(1)
+        time.sleep(5)
 
 def testfunc():
     for i in range(0,10):
@@ -178,9 +192,9 @@ def testfunc():
 
 # doNd: Generalised measurement function able to handle an arbitrary number of param_set axes. 
 # Example:
-# param_set = [set_param1, set param2, ... etc]
+# param_set = [set_param1, set_param2, ... etc]
 # spaces = [space1, space2, ... etc]
-# settle_tile = [settle_time1, settle_time2, ... etc]
+# settle_times = [settle_time1, settle_time2, ... etc]
 # param_meas = [meas_param1, .. etc]
 # name = 'Name of this measurement'
 # comment = 'More explanation'
@@ -188,21 +202,29 @@ def testfunc():
 # doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
 
 def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False):
-    # And then run an experiment
+    # Register measid as global parameter
     global measid
     measid = None
-        
+
+    # Useless if statement, because why not        
     if __name__ is not '__main__':
         #Create Event
-        event = Event()
-        stopthread = Event()
+        event = Event() # Create event shared by threads
+        
+        # Define p1 (run_measurement) and p2 (run_dbextractor) as two function to thread
         p1 = Thread(target = run_measurement, args=(event, param_set, param_meas, spaces, settle_times, name, comment, meander))
+        
+        # Set writeinterval db_extractor
         dbextractor_write_interval = 30 #sec
         p2 = Thread(target = run_dbextractor, args=(event,dbextractor_write_interval))
+        
+        # Kill main thread is subthreads are killed, not necessary here I think..
         p1.daemon = True
         p2.daemon = True
+        
+        #Starting the threads in a try except to catch kernel interrupts
         try:
-                # Start the thread
+            # Start the threads
             p1.start()
             p2.start()
             # If the child thread is still running
@@ -210,7 +232,7 @@ def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meand
                 # Try to join the child thread back to parent for 0.5 seconds
                 p1.join(0.5)
                 p2.join(0.5)
-        # When ctrl+c is received
+        # When kernel interrupt is received (as keyboardinterrupt)
         except KeyboardInterrupt as e:
             # Set the alive attribute to false
             p1.alive = False
@@ -220,10 +242,6 @@ def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meand
             p2.join()
             # Exit with error code
             sys.exit(e)
-        #p1.start()
-        #p2.start()
-        #p1.join()
-        #p2.join()
     qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
                                        ids=[measid], 
                                        overwrite=True,
@@ -233,7 +251,6 @@ def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meand
     return measid
 
 # Old do1d/2d functions are now only wrappers converting the parameters to a format compatible with the new doNd function.
-
 def do1d(param_set, start, stop, num_points, delay=None, param_meas=[], name='', comment=''):
     warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
     param_set = [param_set]
@@ -260,9 +277,6 @@ def do2d(param_set1, start1, stop1, num_points1, param_set2,  start2, stop2, num
         settle_times = [1e-3,1e-3]
     measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
     return measid
-
-#More advanced do1d
-#Waits for a time given by settle_time after setting the setpoint
 
 def do1d_settle(param_set, space, settle_time, delay=None, param_meas=[], name='', comment=''):
     warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
