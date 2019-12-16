@@ -176,6 +176,17 @@ def testfunc():
         print('testfunc',i)
         time.sleep(0.5)
 
+# doNd: Generalised measurement function able to handle an arbitrary number of param_set axes. 
+# Example:
+# param_set = [set_param1, set param2, ... etc]
+# spaces = [space1, space2, ... etc]
+# settle_tile = [settle_time1, settle_time2, ... etc]
+# param_meas = [meas_param1, .. etc]
+# name = 'Name of this measurement'
+# comment = 'More explanation'
+# meander = False/True  ##Sets meandering on first 'slow' axis.
+# doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
+
 def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False):
     # And then run an experiment
     global measid
@@ -221,19 +232,7 @@ def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meand
                                        suppress_output=True)
     return measid
 
-#More advanced do1d
-#Waits for a time given by settle_time after setting the setpoint
-
-def do1d_settle(param_set, space, settle_time, delay=None, param_meas=[], name='', comment=''):
-    warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
-    param_set = [param_set]
-    param_meas = param_meas
-    spaces = [space]
-    settle_times = [settle_time]
-    if delay is not None:
-        warnings.warn('Use of \'delay\' is deprecated, sweep rates are controlled by instruments and \'settle_time\' is used for measurement delays.')
-    measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
-    return measid
+# Old do1d/2d functions are now only wrappers converting the parameters to a format compatible with the new doNd function.
 
 def do1d(param_set, start, stop, num_points, delay=None, param_meas=[], name='', comment=''):
     warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
@@ -262,6 +261,20 @@ def do2d(param_set1, start1, stop1, num_points1, param_set2,  start2, stop2, num
     measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
     return measid
 
+#More advanced do1d
+#Waits for a time given by settle_time after setting the setpoint
+
+def do1d_settle(param_set, space, settle_time, delay=None, param_meas=[], name='', comment=''):
+    warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
+    param_set = [param_set]
+    param_meas = param_meas
+    spaces = [space]
+    settle_times = [settle_time]
+    if delay is not None:
+        warnings.warn('Use of \'delay\' is deprecated, sweep rates are controlled by instruments and \'settle_time\' is used for measurement delays.')
+    measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
+    return measid
+
 #More advanced do2d
 #Modified for custom resolution and to wait for settle_time time after every time set_point is set
 #e.g.    space1 = np.concatenate(([1, 2], np.arange(2.5,6.1,0.5), [6.1, 6.2, 6.25, 6.3, 6.5]))
@@ -276,108 +289,3 @@ def do2d_settle(param_set1, space1, settle_time1, param_set2, space2, settle_tim
         warnings.warn('Use of \'delay\' is deprecated, sweep rates are controlled by instruments and \'settle_time\' is used for measurement delays.', DeprecationWarning)
     measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
     return measid
-
-# Define a class for reading out the lockin (read X,Y and convert to R and G) for voltage bias measurement
-# dI/dV
-# Returns the resistance (R), conductance (G), X, Y lockin values, AC current 
-class diff_R_G_Vbias(qc.MultiParameter):
-    def __init__(self, IV_gain, V_div, lockin_handle, V_ac='', suffix='', autosense=False):
-        super().__init__('diff_resistance'+suffix,
-                         names=('R'+suffix, 'G'+suffix, 'X'+suffix, 'Y'+suffix, 'I_ac'+suffix),
-                         shapes=((), (), (), (), ()),
-                         labels=('Differential resistance '+suffix, 'Differential conductance '+suffix, 'Raw voltage X'+suffix, 'Raw voltage Y'+suffix, 'I_ac'+suffix),
-                         units=('Ohm', 'e^2/h', 'V', 'V', 'A'),
-                         setpoints=((), (), (), (), ()),
-                        docstring='Differential resistance and conductance from current -IVconv> voltage measurement')
-        self._IV_gain = IV_gain
-        self._V_div = V_div
-        self._lockin_handle = lockin_handle
-        self._autosense = autosense
-        self._V_ac = V_ac
-        if V_ac == '':
-            self._V_ac = np.float64(self._lockin_handle.visa_handle.query("SLVL?"))
-    
-    def get_raw(self):
-        if self._autosense:
-                    auto_sensitivity(self._lockin_handle)
-        voltageXY = self._lockin_handle.visa_handle.query("SNAP? 1,2")    
-        voltageX, voltageY = voltageXY.split(",")
-        voltageX = np.float64(voltageX)
-        voltageY = np.float64(voltageY)
-        
-        # some constants
-        const_e = 1.60217662e-19
-        const_h = 6.62607004e-34
-        I_ac = voltageX/self._IV_gain
-        diff_resistance = (self._V_ac/self._V_div )/ I_ac
-        diff_conductance = 1/diff_resistance / const_e**2 * const_h        
-        return (diff_resistance, diff_conductance, voltageX, voltageY, I_ac)
-#diff_resistance = diff_R_G_Vbias(V_ac = 10e-3, IV_gain = 1e6, V_div = 4*1000, lockin_handle=lockin, suffix="_8", autosense=False)
-#diff_resistance = diff_R_G_Vbias(IV_gain = 1e6, V_div = 4*1000, lockin_handle=lockin, suffix="_8", autosense=True)
-
-# Define a class for reading out the lockin (X,Y at the same time and convert to R and G)
-# dV/dI
-# Returns the resistance (R), conductance (G), X and Y lockin values
-class diff_R_G_Ibias(qc.MultiParameter):
-    def __init__(self, R_pre, V_gain, lockin_handle, V_ac='', suffix='', autosense=False):
-        super().__init__('diff_resistance'+suffix,
-                         names=('R'+suffix, 'G'+suffix, 'X'+suffix, 'Y'+suffix),
-                         shapes=((), (), (), ()),
-                         labels=('Differential resistance '+suffix, 'Differential conductance '+suffix,'Raw voltage X'+suffix, 'Raw voltage Y'+suffix),
-                         units=('Ohm', 'e^2/h', 'V', 'V'),
-                         setpoints=((), (), (), ()),
-                        docstring='Differential resistance and conductance converted from raw voltage measurement')
-        self._R_pre = R_pre
-        self._V_gain = V_gain
-        self._lockin_handle = lockin_handle
-        self._autosense = autosense
-        self._V_ac = V_ac
-        if V_ac == '':
-            self._V_ac = np.float64(self._lockin_handle.visa_handle.query("SLVL?"))
-    
-    def get_raw(self):
-        if self._autosense:
-                    auto_sensitivity(self._lockin_handle)
-        voltageXY = self._lockin_handle.visa_handle.ask("SNAP? 1,2")    
-        voltageX, voltageY = voltageXY.split(",")
-        voltageX = np.float64(voltageX)
-        voltageY = np.float64(voltageY)
-        
-        # some constants
-        const_e = 1.60217662e-19
-        const_h = 6.62607004e-34        
-        diff_resistance = (voltageX/self._V_gain)/(self._V_ac/self._R_pre)
-        diff_conductance = 1/diff_resistance / const_e**2 * const_h
-        return (diff_resistance, diff_conductance, voltageX, voltageY)
-#diff_resistance = diff_R_G_Ibias(V_ac = 10e-3, R_pre=1e6, V_gain = 100, lockin_handle=lockin, suffix="_8", autosense=False)
-
-
-#Lock-in auto_sensitivity functions
-def change_sensitivity_AP(self, dn):
-    _ = self.sensitivity.get()
-    n = int(self.sensitivity.raw_value)
-    if self.input_config() in ['a', 'a-b']:
-        n_to = self._N_TO_VOLT
-    else:
-        n_to = self._N_TO_CURR
-
-    if n + dn > max(n_to.keys()) or n + dn < min(n_to.keys()):
-        return False
-
-    self.sensitivity.set(n_to[n + dn])
-    time.sleep(3*self.time_constant()) #Wait to read the correct value
-    return True
-
-def auto_sensitivity(self, lim=1000e-9):
-    sens = self.sensitivity.get()
-    X_val = self.X.get()
-    while np.abs(X_val) <= 0.2*sens or np.abs(X_val) >= 0.9*sens:
-        if np.abs(X_val) <= 0.2*sens:
-            if sens == lim:
-                break
-            change_sensitivity_AP(self, -1) 
-        elif np.abs(X_val) >= 0.9*sens:
-            change_sensitivity_AP(self, 1)
-        sens = self.sensitivity.get()
-        X_val = self.X.get()  
-
