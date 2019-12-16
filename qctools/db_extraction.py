@@ -33,7 +33,7 @@ def db_extractor(dbloc=None,
         if os.path.isfile(dbloc) and dbloc.endswith('.db'):
             print('*.db file found, continue to unpack...')
         else:
-            print('Well, your db file aint where you say it is..')
+            print('*.db file location cannot be found..')
             return;
     
     configuration = qc.config
