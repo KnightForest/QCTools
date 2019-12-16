@@ -185,11 +185,6 @@ def run_dbextractor(event,dbextractor_write_interval):
                 pass
         time.sleep(5)
 
-def testfunc():
-    for i in range(0,10):
-        print('testfunc',i)
-        time.sleep(0.5)
-
 # doNd: Generalised measurement function able to handle an arbitrary number of param_set axes. 
 # Example:
 # param_set = [set_param1, set_param2, ... etc]
