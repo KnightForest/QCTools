@@ -106,8 +106,7 @@ def db_extractor(dbloc=None,
                         for o in range(0,len(deps)):
                             depsind.append(param_names.index(deps[o]))
                         depend_dict.update([(n, depsind)])
-                    n = n + 1
-                    
+                        n = n + 1
                 #Length of final result_dict determines number of files
                 n=0                 
                 for i in range(0,len(result_dict)): # len(result_dict) gives number of independent measurement, i.e. .dat files
@@ -115,7 +114,7 @@ def db_extractor(dbloc=None,
                     #If number of files > 1, add a number in front
                     if len(result_dict) > 1:
                         filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
-                        filenamejson = str(n) + "_" + "run_snapshot.json"
+                        filenamejson = "run_snapshot.json"
                     else:
                         filenamep2 = run.name + "_" + runparams + ".dat"
                         filenamejson = "run_snapshot.json"
@@ -126,7 +125,7 @@ def db_extractor(dbloc=None,
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
                             filenamep2 = '{:03d}'.format(runid) + '-' + str(n) + "_" + run.name + runparams + ".dat"
-                            filenamejson = '{:03d}'.format(runid) + '-' + str(n) + "_" + "run_snapshot.json"
+                            filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
                         else:
                             filenamep2 = '{:03d}'.format(runid) + '-' + run.name + runparams + ".dat"
                             filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
@@ -135,11 +134,11 @@ def db_extractor(dbloc=None,
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
                             filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
-                            filenamejson = str(n) + "_" + "run_snapshot.json"
+                            filenamejson = "run_snapshot.json"
                         else:
                             filenamep2 = run.name + runparams + ".dat"
                             filenamejson = "run_snapshot.json"
-                        folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)                    
+                        folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)
                     
                     folder = folder.replace(" ", "_")
                     filenamep2 = filenamep2.replace(" ", "_")
