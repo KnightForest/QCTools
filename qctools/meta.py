@@ -1,4 +1,6 @@
 import qcodes as qc
+import numpy as np
+import time
 class setparam_meta(qc.Parameter):
     def __init__(self, name, label, scale_param, instrument, maxVal, unit, inter_delay, step):
         super().__init__(name = "setparam_meta", unit=unit)
@@ -43,7 +45,7 @@ class getparam_meta(qc.Parameter):
 # dI/dV
 # Returns the resistance (R), conductance (G), X, Y lockin values, AC current 
 class diff_R_G_Vbias(qc.MultiParameter):
-    def __init__(self, IV_gain, V_div, lockin_handle, V_ac='', suffix='', autosense=False):
+    def __init__(self, lockin_handle, IV_gain, V_div, V_ac=None, suffix='', autosense=False, ntc=3, lim=1e-6):
         super().__init__('diff_resistance'+suffix,
                          names=('R'+suffix, 'G'+suffix, 'X'+suffix, 'Y'+suffix, 'I_ac'+suffix),
                          shapes=((), (), (), (), ()),
@@ -56,17 +58,20 @@ class diff_R_G_Vbias(qc.MultiParameter):
         self._lockin_handle = lockin_handle
         self._autosense = autosense
         self._V_ac = V_ac
-        if V_ac == '':
-            self._V_ac = np.float64(self._lockin_handle.visa_handle.query("SLVL?"))
+        if self._V_ac is not None:
+            self._lockin_handle.amplitude.set(self._V_ac)
+        self._ntc = ntc
+        self._lim = lim
     
     def get_raw(self):
         if self._autosense:
-            auto_sensitivity(self._lockin_handle)
+            auto_sensitivity(self._lockin_handle, self._ntc, self._lim)
         voltageXY = self._lockin_handle.visa_handle.query("SNAP? 1,2")    
         voltageX, voltageY = voltageXY.split(",")
         voltageX = np.float64(voltageX)
         voltageY = np.float64(voltageY)
-        
+        self._V_ac = np.float64(self._lockin_handle.visa_handle.query("SLVL?"))
+        print(self._V_ac)
         # some constants
         const_e = 1.60217662e-19
         const_h = 6.62607004e-34
@@ -81,7 +86,7 @@ class diff_R_G_Vbias(qc.MultiParameter):
 # dV/dI
 # Returns the resistance (R), conductance (G), X and Y lockin values
 class diff_R_G_Ibias(qc.MultiParameter):
-    def __init__(self, R_pre, V_gain, lockin_handle, V_ac='', suffix='', autosense=False):
+    def __init__(self, lockin_handle, R_pre, V_gain, V_ac=None, suffix='', autosense=False, ntc=3, lim=1e-6):
         super().__init__('diff_resistance'+suffix,
                          names=('R'+suffix, 'G'+suffix, 'X'+suffix, 'Y'+suffix),
                          shapes=((), (), (), ()),
@@ -94,17 +99,19 @@ class diff_R_G_Ibias(qc.MultiParameter):
         self._lockin_handle = lockin_handle
         self._autosense = autosense
         self._V_ac = V_ac
-        if V_ac == '':
-            self._V_ac = np.float64(self._lockin_handle.visa_handle.query("SLVL?"))
+        if self._V_ac is not None:
+            self._lockin_handle.amplitude.set(self._V_ac)
+        self._ntc = ntc
+        self._lim = lim
     
     def get_raw(self):
         if self._autosense:
-            auto_sensitivity(self._lockin_handle)
+            auto_sensitivity(self._lockin_handle, self._ntc, self._lim)
         voltageXY = self._lockin_handle.visa_handle.ask("SNAP? 1,2")    
         voltageX, voltageY = voltageXY.split(",")
         voltageX = np.float64(voltageX)
         voltageY = np.float64(voltageY)
-        
+        self._V_ac = np.float64(self._lockin_handle.visa_handle.query("SLVL?"))
         # some constants
         const_e = 1.60217662e-19
         const_h = 6.62607004e-34        
@@ -115,30 +122,33 @@ class diff_R_G_Ibias(qc.MultiParameter):
 
 
 #Lock-in auto_sensitivity functions
-def change_sensitivity_AP(self, dn):
-    _ = self.sensitivity.get()
-    n = int(self.raw_value)
-    if self.input_config() in ['a', 'a-b']:
-        n_to = self._N_TO_VOLT
-    else:
-        n_to = self._N_TO_CURR
+# def change_sensitivity_AP(self, dn):
+    # _ = self.sensitivity.get()
+    # n = int(self.raw_value)
+    # if self.input_config() in ['a', 'a-b']:
+        # n_to = self._N_TO_VOLT
+    # else:
+        # n_to = self._N_TO_CURR
 
-    if n + dn > max(n_to.keys()) or n + dn < min(n_to.keys()):
-        return False
+    # if n + dn > max(n_to.keys()) or n + dn < min(n_to.keys()):
+        # return False
 
-    self.sensitivity.set(n_to[n + dn])
-    time.sleep(3*self.time_constant()) #Wait to read the correct value
-    return True
+    # self.sensitivity.set(n_to[n + dn])
+    # time.sleep(3*self.time_constant()) #Wait to read the correct value
+    # return True
 
-def auto_sensitivity(self, lim=1000e-9):
+def auto_sensitivity(self, ntc, lim):
     sens = self.sensitivity.get()
     X_val = self.X.get()
+    tc  = self.time_constant()
     while np.abs(X_val) <= 0.2*sens or np.abs(X_val) >= 0.9*sens:
         if np.abs(X_val) <= 0.2*sens:
             if sens == lim:
                 break
-            change_sensitivity_AP(self, -1) 
-        elif np.abs(X_val) >= 0.9*sens:
-            change_sensitivity_AP(self, 1)
+            self._change_sensitivity(-1)
+            time.sleep(ntc*tc) #Wait to read the correct value
+        else:
+            self._change_sensitivity(1)
+            time.sleep(ntc*tc)
         sens = self.sensitivity.get()
         X_val = self.X.get()  
