@@ -71,7 +71,6 @@ class diff_R_G_Vbias(qc.MultiParameter):
         voltageX = np.float64(voltageX)
         voltageY = np.float64(voltageY)
         self._V_ac = np.float64(self._lockin_handle.visa_handle.query("SLVL?"))
-        print(self._V_ac)
         # some constants
         const_e = 1.60217662e-19
         const_h = 6.62607004e-34
