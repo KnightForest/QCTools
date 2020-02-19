@@ -119,7 +119,7 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
             #Check for nonzero axis to apply new setpoints by looking in changesetpoints arrays
             resultlist = [None]*ndims
             for j in reversed(range(0,ndims)):
-                if not np.isclose(changesetpoints[i,j] , 0): # Only set set params that need to be changed
+                if not np.isclose(changesetpoints[i,j] , 0, atol=0): # Only set set params that need to be changed
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
                 for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
