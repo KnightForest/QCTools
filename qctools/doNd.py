@@ -162,7 +162,7 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
                 elapsed_in_sec = (datetime.datetime.now()-starttime).total_seconds()
                 remaining_in_sec = duration_in_sec-elapsed_in_sec
                 perc_complete = np.round(100*frac_complete,2)
-                progressstring = 'Setpoint ' + str(i) + ' of ' + str(len(setpoints)) + ', ' + str(perc_complete) + ' % complete.'
+                progressstring = 'Setpoint ' + str(i+1) + ' of ' + str(len(setpoints)) + ', ' + str(perc_complete) + ' % complete.'
                 durationstring = '      Total duration - ' + str(datetime.timedelta(seconds=np.round(duration_in_sec)))
                 elapsedstring =  '        Elapsed time - ' +  str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))
                 remainingstring ='      Remaining time - ' + str(datetime.timedelta(seconds=np.round(remaining_in_sec)))
