@@ -28,15 +28,29 @@ def fill_station(param_set, param_meas):
         measparstring += parameter.name + ',' 
     return measparstring
 
+def fill_station_zerodim(param_meas):
+    station = Station()
+    allinstr=qc.instrument.base.Instrument._all_instruments
+    for key,val in allinstr.items():
+        instr = qc.instrument.base.Instrument.find_instrument(key)
+        station.add_component(instr)
+    measparstring = ""
+    for parameter in param_meas:
+        station.add_component(parameter)
+        measparstring += parameter.name + ',' 
+    return measparstring
+
 def safetyratesdelays(param_set,spaces):
     #Sample blowup prevention, patent pending, checking and correcting step and inter_delay for all set parameters 
     for i in range(0,len(param_set)):
         if param_set[i].step == 0 or param_set[i].step == None:
-            param_set[i].step = np.min(np.absolute(np.diff(spaces[i])[np.where(np.diff(spaces[i])!=0)]))
-            print('Warning, \'step\' attribute for set parameter ', param_set[i].name ,' undefined. Defaulting to minimum measurement stepsize :{}'.format(param_set[i].step) )
+            if len(spaces[i])>1:
+                print('Warning, \'step\' attribute for set parameter ', param_set[i].name ,' undefined. Defaulting to minimum measurement stepsize :{}'.format(param_set[i].step) )
+                param_set[i].step = np.min(np.absolute(np.diff(spaces[i])[np.where(np.diff(spaces[i])!=0)]))
         if param_set[i].inter_delay == 0 or param_set[i].inter_delay == None:
-            param_set[i].inter_delay = 5e-2
             print('Warning, \'inter_delay\' attribute for set parameter ', param_set[i].name ,' undefined. Defaulting to \'5e-2\' s.')
+            param_set[i].inter_delay = 5e-2
+
 
 def cartprod(*arrays):
     N = len(arrays)
@@ -101,7 +115,6 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
     with meas.run() as datasaver:  
         global measid
         measid = datasaver.run_id
-        print(measid)
 
         # Start various timers
         starttime = datetime.datetime.now()
@@ -112,6 +125,8 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
         ndims = int(len(spaces))
         lenarrays = np.zeros(len(spaces))
         for i in range(0,len(spaces)):
+            print(spaces)
+            print(len(spaces[i]))
             lenarrays[i] = int(len(spaces[i]))
         
         # Main loop for setting values
@@ -168,6 +183,53 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
         print(finishstring)
         event.set() # Trigger closing of run_dbextractor
 
+def run_zerodim(event, param_meas, name, comment):
+    # Local reference of THIS thread object
+    print('Running 0-dimensional measurement, time estimation not available.')
+    t = current_thread()
+    # Thread is alive by default
+    t.alive = True
+
+    # Create measurement object
+    meas = Measurement() 
+    # Apply name
+    meas.name = name
+
+    ### Filling station for snapshotting
+    fill_station_zerodim(param_meas)
+    
+    meas.write_period = 0.5
+    
+    output = [] 
+    # Registering readout parameters
+    param_measstring = ''
+    for parameter in param_meas:
+        meas.register_parameter(parameter)
+        output.append([parameter, None])   
+        param_measstring += parameter.name + ', '
+    
+    # Start measurement routine
+    with meas.run() as datasaver:  
+        global measid
+        measid = datasaver.run_id
+
+        # Start various timers
+        starttime = datetime.datetime.now()
+        lastwrittime = starttime
+        lastprinttime = starttime
+
+        # Getting dimensions and array dimensions and lengths
+        # Main loop for setting values
+        #Check for nonzero axis to apply new setpoints by looking in changesetpoints arrays
+        resultlist = [None]*1
+        for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
+                output[k][1] = parameter.get()                
+        datasaver.add_result(*output)
+        datasaver.dataset.add_metadata('Comment', comment) # Add comment to metadata in database
+        finishstring =   'Finished - ' + str((datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S')) # Print finishing time
+        print(finishstring)
+        event.set() # Trigger closing of run_dbextractor
+
 def run_dbextractor(event,dbextractor_write_interval):
     #Controls how often the measurement is written to *.dat file
     lastwrittime = datetime.datetime.now()
@@ -207,8 +269,10 @@ def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meand
         event = Event() # Create event shared by threads
         
         # Define p1 (run_measurement) and p2 (run_dbextractor) as two function to thread
-        p1 = Thread(target = run_measurement, args=(event, param_set, param_meas, spaces, settle_times, name, comment, meander))
-        
+        if param_set:
+            p1 = Thread(target = run_measurement, args=(event, param_set, param_meas, spaces, settle_times, name, comment, meander))
+        else:
+            p1 = Thread(target = run_zerodim, args=(event, param_meas, name, comment))
         # Set writeinterval db_extractor
         dbextractor_write_interval = 30 #sec
         p2 = Thread(target = run_dbextractor, args=(event,dbextractor_write_interval))
