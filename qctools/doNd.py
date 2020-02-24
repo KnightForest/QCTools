@@ -125,8 +125,6 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
         ndims = int(len(spaces))
         lenarrays = np.zeros(len(spaces))
         for i in range(0,len(spaces)):
-            print(spaces)
-            print(len(spaces[i]))
             lenarrays[i] = int(len(spaces[i]))
         
         # Main loop for setting values
