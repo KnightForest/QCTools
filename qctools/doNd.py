@@ -13,6 +13,20 @@ from IPython.display import display, clear_output
 warnings.simplefilter('always', DeprecationWarning)
 do1d2ddeprecationwarning = '\'do1d\' and \'do2d\' are deprecated and call the general doNd function as a variable wrapper. Please consider directly calling \'doNd\'.'
 
+# function to get unique values 
+def unique(list1): 
+  
+    # intilize a null list 
+    unique_list = [] 
+      
+    # traverse for all elements 
+    for x in list1: 
+        # check if exists in unique_list or not 
+        if x not in unique_list: 
+            unique_list.append(x) 
+    # print list 
+    return unique_list 
+
 def fill_station(param_set, param_meas):
     station = Station()
     allinstr=qc.instrument.base.Instrument._all_instruments
@@ -24,8 +38,12 @@ def fill_station(param_set, param_meas):
         station.add_component(parameter)
         measparstring += parameter.name + ',' 
     for parameter in param_meas:
-        station.add_component(parameter)
-        measparstring += parameter.name + ',' 
+        try: # Prevent station crash when component of parameter is not unique
+            station.add_component(parameter)
+            measparstring += parameter.name + ',' 
+        except Exception as e:
+            print('Error ignored when filling station: \n', e)
+            pass
     return measparstring
 
 def fill_station_zerodim(param_meas):
@@ -67,7 +85,7 @@ def cartprodmeander(*arrays):
         fullmesh[:,-1][(2*i+1)*len(arrays[-1]):(2*i+2)*len(arrays[-1])]=fullmesh[:,-1][(2*i+1)*len(arrays[-1]):(2*i+2)*len(arrays[-1])][::-1]
     return fullmesh
 
-def run_measurement(event, param_set, param_meas, spaces, settle_times, name, comment, meander):
+def run_measurement(event, param_set, param_meas, spaces, settle_times, name, comment, meander, extra_cmd, extra_cmd_val):
     # Local reference of THIS thread object
     t = current_thread()
     # Thread is alive by default
@@ -136,6 +154,11 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
                 for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
+                    if extra_cmd[k] is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
+                        if extra_cmd_val[k] is not None:
+                            (extra_cmd[k])(extra_cmd_val[k])
+                        else:
+                            (extra_cmd[k])()
                     output[k][1] = parameter.get()                
                 resultlist[j] = (param_set[j],setpoints[i,j]) # Make a list of result
             datasaver.add_result(*resultlist, # Add everything to the database
@@ -254,9 +277,11 @@ def run_dbextractor(event,dbextractor_write_interval):
 # name = 'Name of this measurement'
 # comment = 'More explanation'
 # meander = False/True  ##Sets meandering on first 'slow' axis.
-# doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
+# extra_cmd = Optional extra command that is run before each measurement paremeter is read out.
+# extra_cmd_val = Optional extra value that of extra_cmd, it will be evaluated as extra_cmd(extra_cmd_val). If extra_cmd_val is not given, extra_cmd() will be run.
+# doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False, extra_cmd=None, extra_cmd_val=None)
 
-def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False):
+def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False, extra_cmd=None, extra_cmd_val=None):
     # Register measid as global parameter
     global measid
     measid = None
@@ -268,7 +293,7 @@ def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meand
         
         # Define p1 (run_measurement) and p2 (run_dbextractor) as two function to thread
         if param_set:
-            p1 = Thread(target = run_measurement, args=(event, param_set, param_meas, spaces, settle_times, name, comment, meander))
+            p1 = Thread(target = run_measurement, args=(event, param_set, param_meas, spaces, settle_times, name, comment, meander, extra_cmd, extra_cmd_val))
         else:
             p1 = Thread(target = run_zerodim, args=(event, param_meas, name, comment))
         # Set writeinterval db_extractor
