@@ -154,7 +154,7 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
                 for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
-                    if extra_cmd[k] is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
+                    if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
                         if extra_cmd_val[k] is not None:
                             (extra_cmd[k])(extra_cmd_val[k])
                         else:
