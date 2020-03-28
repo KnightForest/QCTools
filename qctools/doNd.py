@@ -75,7 +75,7 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
     ### Checking and setting safety rates and delays
     safetyratesdelays(param_set,spaces)    
     
-    meas.write_period = 0.5
+    meas.write_period = 5
        
     #Make array showing changes between setpoints on axes
     changesetpoints = setpoints - np.roll(setpoints, 1, axis=0)
@@ -101,7 +101,6 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
     with meas.run() as datasaver:  
         global measid
         measid = datasaver.run_id
-        print(measid)
 
         # Start various timers
         starttime = datetime.datetime.now()
@@ -135,16 +134,18 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
                                    overwrite=True,
                                    newline_slowaxes=True,
                                    no_folders=False,
-                                   suppress_output=True)
+                                   suppress_output=True,
+                                   useopendbconnection = True)
                 raise KeyboardInterrupt('User interrupted doNd. All data flushed to database and extracted to *.dat file.')
                 # Break out of for loop
                 break
             #Time estimation
-            printinterval = .05 # Reduce printinterval to save CPU
-            if (datetime.datetime.now()-lastprinttime).total_seconds() > printinterval: # Calculate and print time estimation
+            printinterval = 3 # Reduce printinterval to save CPU
+            now = datetime.datetime.now()
+            if (now-lastprinttime).total_seconds() > printinterval: # Calculate and print time estimation
                 frac_complete = (i+1)/len(setpoints)
-                duration_in_sec = (datetime.datetime.now()-starttime).total_seconds()/frac_complete
-                elapsed_in_sec = (datetime.datetime.now()-starttime).total_seconds()
+                duration_in_sec = (now-starttime).total_seconds()/frac_complete
+                elapsed_in_sec = (now-starttime).total_seconds()
                 remaining_in_sec = duration_in_sec-elapsed_in_sec
                 perc_complete = np.round(100*frac_complete,2)
                 progressstring = 'Setpoint ' + str(i) + ' of ' + str(len(setpoints)) + ', ' + str(perc_complete) + ' % complete.'
@@ -161,10 +162,10 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
                 totalstring = runidstring + '\n' + runnameandcommentstring + '\n' + setparameterstring + '\n' + readoutparameterstring + '\n\n' + progressstring + '\n' + startstring + '\n' +  etastring + '\n' + durationstring + '\n' + elapsedstring + '\n' + remainingstring 
                 clear_output(wait=True)
                 print(totalstring)
-                lastprinttime = datetime.datetime.now()
+                lastprinttime = now
 
             datasaver.dataset.add_metadata('Comment', comment) # Add comment to metadata in database
-        finishstring =   'Finished - ' + str((datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S')) # Print finishing time
+        finishstring =   'Finished - ' + str((now).strftime('%Y-%m-%d %H:%M:%S')) # Print finishing time
         print(finishstring)
         event.set() # Trigger closing of run_dbextractor
 
@@ -179,11 +180,12 @@ def run_dbextractor(event,dbextractor_write_interval):
                                                    overwrite=True,
                                                    newline_slowaxes=True,
                                                    no_folders=False,
-                                                   suppress_output=True)
+                                                   suppress_output=True,
+                                                   useopendbconnection = True)
                 lastwrittime = datetime.datetime.now()
             except:
                 pass
-        time.sleep(5)
+        time.sleep(120)
 
 # doNd: Generalised measurement function able to handle an arbitrary number of param_set axes. 
 # Example:
@@ -242,7 +244,8 @@ def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meand
                                        overwrite=True,
                                        newline_slowaxes=True,
                                        no_folders=False,
-                                       suppress_output=True)
+                                       suppress_output=True,
+                                       useopendbconnection = True)
     return measid
 
 # Old do1d/2d functions are now only wrappers converting the parameters to a format compatible with the new doNd function.

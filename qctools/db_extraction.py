@@ -26,7 +26,8 @@ def db_extractor(dbloc=None,
                  paramtofilename = False,
                  newline_slowaxes = True,
                  no_folders = False,
-                 suppress_output = False):
+                 suppress_output = False,
+                 useopendbconnection = False):
 
     
     if not suppress_output:
@@ -36,12 +37,15 @@ def db_extractor(dbloc=None,
             print('*.db file location cannot be found..')
             return;
     
-    configuration = qc.config
-    previously_opened_db = configuration['core']['db_location']
-    configuration['core']['db_location'] = dbloc
-    #configuration['core']['db_location'] = r'D:\Switchdrive\CdAs\Data\20190328_MO_Cd3As2_Batch2AB\20190328_MO_Cd3As2_Batch2AB.db'
-    configuration.save_to_home()
-    initialise_database()
+    if useopendbconnection == False:
+        configuration = qc.config
+        previously_opened_db = configuration['core']['db_location']
+        configuration['core']['db_location'] = dbloc
+        #configuration['core']['db_location'] = r'D:\Switchdrive\CdAs\Data\20190328_MO_Cd3As2_Batch2AB\20190328_MO_Cd3As2_Batch2AB.db'
+        configuration.save_to_home()
+        initialise_database()
+    else:
+        print('useopendbconnection')
     
     #Looping through all exps inside database
     for i in range(1,len(qc.dataset.experiment_container.experiments())+1,1):
@@ -172,14 +176,25 @@ def db_extractor(dbloc=None,
                         #headerunits = ''
                         headerlabelsandunits = ''
                         
+                        # Pre-allocate data array                       
+                        lset = len(set_params)
+                        lmeas = len(meas_params)
+                        lval = len(setdata[param_names[meas_params[0]]][param_names[0]])
+                        print(lset,lmeas,lval)
+                        run_matrix2=np.empty([lset+lmeas,len(setdata[param_names[meas_params[0]]][param_names[0]])])
+
                         # Collect depends (set axes) columns
+                        colcounter=0
                         for j in set_params:
                             run_matrix.append(setdata[param_names[meas_params[0]]][param_names[j]])
+                            run_matrix2[colcounter,:]=setdata[param_names[meas_params[0]]][param_names[j]]
+                            #print(run_matrix)
+                            #print(run_matrix2)
                             headernames += parameters[j].name + "\t"
                             #headerlabels += parameters[j].label + "\t"
                             #headerunits += parameters[j].unit + "\t"
                             headerlabelsandunits += parameters[j].label + " (" + parameters[j].unit +")" + "\t"
-                        
+                            colcounter=colcounter+1
                         # Collect measurement (meas axes) columns
                         for k in meas_params:
                             measdata = run.get_parameter_data(param_names[k])
@@ -189,9 +204,12 @@ def db_extractor(dbloc=None,
                         header += headernames + '\n'
                         header += headerlabelsandunits
                         # Stick'em together
-                        run_matrix = np.vstack(run_matrix)
-                        run_matrix = np.flipud(np.rot90(run_matrix, k=-1, axes=(1,0)))
-                        
+                        #run_matrix = np.vstack(run_matrix)
+                        #run_matrix = np.flipud(np.rot90(run_matrix, k=-1, axes=(1,0)))
+                        #run_matrix2 = np.vstack(run_matrix)
+                        #run_matrix2 = np.flipud(np.rot90(run_matrix, k=-1, axes=(1,0)))
+                        print(run_matrix)
+                        print(run_matrix2)
                         # Confirming function is a good boy
                         if not suppress_output:
                             print("Saving measurement with id " + str(runid) +  " to  "+ fullpath)
