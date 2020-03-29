@@ -177,7 +177,7 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
                 # Break out of for loop
                 break
             #Time estimation
-            printinterval = 3 # Reduce printinterval to save CPU
+            printinterval = 0.05 # Reduce printinterval to save CPU
             now = datetime.datetime.now()
             if (now-lastprinttime).total_seconds() > printinterval: # Calculate and print time estimation
                 frac_complete = (i+1)/len(setpoints)
@@ -257,19 +257,24 @@ def run_dbextractor(event,dbextractor_write_interval):
     #Controls how often the measurement is written to *.dat file
     lastwrittime = datetime.datetime.now()
     while event.is_set()==False:
-        if (datetime.datetime.now()-lastwrittime).total_seconds() > dbextractor_write_interval and measid is not None:
-            try:
-                qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
-                                                   ids=[measid], 
-                                                   overwrite=True,
-                                                   newline_slowaxes=True,
-                                                   no_folders=False,
-                                                   suppress_output=True,
-                                                   useopendbconnection = True)
-                lastwrittime = datetime.datetime.now()
-            except:
-                pass
-        time.sleep(120)
+        #print(lastwrittime)
+        #print(dbextractor_write_interval)
+        #print((datetime.datetime.now()-lastwrittime).total_seconds())
+        timepassedsincelastwrite = (datetime.datetime.now()-lastwrittime).total_seconds()
+        if timepassedsincelastwrite > dbextractor_write_interval and measid is not None:
+            if timepassedsincelastwrite > 1.5*dbextractor_write_interval:
+                time.sleep(3*timepassedsincelastwrite)
+            qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
+                                               ids=[measid], 
+                                               overwrite=True,
+                                               newline_slowaxes=True,
+                                               no_folders=False,
+                                               suppress_output=True,
+                                               useopendbconnection = True)
+            lastwrittime = datetime.datetime.now()
+            #except:
+            #    pass
+        time.sleep(dbextractor_write_interval/10)
 
 # doNd: Generalised measurement function able to handle an arbitrary number of param_set axes. 
 # Example:
