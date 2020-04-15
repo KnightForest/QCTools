@@ -85,7 +85,17 @@ def cartprodmeander(*arrays):
         fullmesh[:,-1][(2*i+1)*len(arrays[-1]):(2*i+2)*len(arrays[-1])]=fullmesh[:,-1][(2*i+1)*len(arrays[-1]):(2*i+2)*len(arrays[-1])][::-1]
     return fullmesh
 
-def run_measurement(event, param_set, param_meas, spaces, settle_times, name, comment, meander, extra_cmd, extra_cmd_val):
+def run_measurement(event, 
+                    param_set, 
+                    param_meas, 
+                    spaces, 
+                    settle_times, 
+                    name, 
+                    comment, 
+                    meander, 
+                    extra_cmd, 
+                    extra_cmd_val,
+                    wait_first_datapoint):
     # Local reference of THIS thread object
     t = current_thread()
     # Thread is alive by default
@@ -153,6 +163,8 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
                 if not np.isclose(changesetpoints[i,j] , 0, atol=0): # Only set set params that need to be changed
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
+                if i==0:
+                    time.sleep(wait_first_datapoint)
                 for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
                     if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
                         if extra_cmd[k] is not None:
@@ -207,7 +219,7 @@ def run_measurement(event, param_set, param_meas, spaces, settle_times, name, co
         print(finishstring)
         event.set() # Trigger closing of run_dbextractor
 
-def run_zerodim(event, param_meas, name, comment):
+def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
     # Local reference of THIS thread object
     print('Running 0-dimensional measurement, time estimation not available.')
     t = current_thread()
@@ -245,6 +257,7 @@ def run_zerodim(event, param_meas, name, comment):
         # Getting dimensions and array dimensions and lengths
         # Main loop for setting values
         #Check for nonzero axis to apply new setpoints by looking in changesetpoints arrays
+        time.sleep(wait_first_datapoint)
         resultlist = [None]*1
         for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
                 output[k][1] = parameter.get()                
@@ -290,7 +303,16 @@ def run_dbextractor(event,dbextractor_write_interval):
 # extra_cmd_val = Optional extra value that of extra_cmd, it will be evaluated as extra_cmd(extra_cmd_val). If extra_cmd_val is not given, extra_cmd() will be run.
 # doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False, extra_cmd=None, extra_cmd_val=None)
 
-def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False, extra_cmd=None, extra_cmd_val=None):
+def doNd(param_set, 
+         spaces, 
+         settle_times, 
+         param_meas, 
+         name='', 
+         comment='', 
+         meander=False, 
+         extra_cmd=None, 
+         extra_cmd_val=None,
+         wait_first_datapoint=1):
     # Register measid as global parameter
     global measid
     measid = None
@@ -302,9 +324,23 @@ def doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meand
         
         # Define p1 (run_measurement) and p2 (run_dbextractor) as two function to thread
         if param_set:
-            p1 = Thread(target = run_measurement, args=(event, param_set, param_meas, spaces, settle_times, name, comment, meander, extra_cmd, extra_cmd_val))
+            p1 = Thread(target = run_measurement, args=(event, 
+                                                        param_set, 
+                                                        param_meas, 
+                                                        spaces, 
+                                                        settle_times, 
+                                                        name, 
+                                                        comment, 
+                                                        meander, 
+                                                        extra_cmd, 
+                                                        extra_cmd_val, 
+                                                        wait_first_datapoint))
         else:
-            p1 = Thread(target = run_zerodim, args=(event, param_meas, name, comment))
+            p1 = Thread(target = run_zerodim, args=(event, 
+                                                    param_meas, 
+                                                    name, 
+                                                    comment,
+                                                    wait_first_datapoint))
         # Set writeinterval db_extractor
         dbextractor_write_interval = 30 #sec
         p2 = Thread(target = run_dbextractor, args=(event,dbextractor_write_interval))
