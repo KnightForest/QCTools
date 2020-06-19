@@ -159,13 +159,17 @@ def run_measurement(event,
         for i in range(0,len(setpoints)):
             #Check for nonzero axis to apply new setpoints by looking in changesetpoints arrays
             resultlist = [None]*ndims
-            for j in reversed(range(0,ndims)):
+            if i==0: #On first datapoint change set_params from slow to fast axis
+                dimlist = range(0,ndims)
+            else: #On all other datapoints change fast axis first
+                dimlist = reversed(range(0,ndims))
+            for j in dimlist:
                 if not np.isclose(changesetpoints[i,j] , 0, atol=0): # Only set set params that need to be changed
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
-                if i==0:
-                    time.sleep(wait_first_datapoint)             
                 resultlist[j] = (param_set[j],setpoints[i,j]) # Make a list of result
+            if i==0: # Add additional waiting time for first measurement point before readout.h
+                time.sleep(wait_first_datapoint)             
             for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
                 if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
                     if extra_cmd[k] is not None:
