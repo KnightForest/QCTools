@@ -164,16 +164,16 @@ def run_measurement(event,
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
                 if i==0:
-                    time.sleep(wait_first_datapoint)
-                for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
-                    if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
-                        if extra_cmd[k] is not None:
-                            if extra_cmd_val[k] is not None:
-                                (extra_cmd[k])(extra_cmd_val[k])
-                            else:
-                                (extra_cmd[k])()
-                    output[k][1] = parameter.get()                
+                    time.sleep(wait_first_datapoint)             
                 resultlist[j] = (param_set[j],setpoints[i,j]) # Make a list of result
+            for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
+                if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
+                    if extra_cmd[k] is not None:
+                        if extra_cmd_val[k] is not None:
+                            (extra_cmd[k])(extra_cmd_val[k])
+                        else:
+                            (extra_cmd[k])()
+                output[k][1] = parameter.get()  
             datasaver.add_result(*resultlist, # Add everything to the database
                                  *output)
             
