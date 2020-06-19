@@ -313,6 +313,12 @@ def doNd(param_set,
          extra_cmd=None, 
          extra_cmd_val=None,
          wait_first_datapoint=1):
+    if len(param_set) is not len(spaces):
+        errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of spaces is ' + str(len(spaces)) + '.'
+        sys.exit(errstr)
+    if len(param_set) is not len(settle_times):
+        errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of settle_times is ' + str(len(settle_times)) + '.' 
+        sys.exit(errstr)
     # Register measid as global parameter
     global measid
     measid = None

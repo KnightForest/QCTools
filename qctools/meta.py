@@ -44,7 +44,15 @@ class getparam_meta(qc.Parameter):
 # dI/dV
 # Returns the resistance (R), conductance (G), X, Y lockin values, AC current 
 class diff_R_G_Vbias(qc.MultiParameter):
-    def __init__(self, lockin_handle, IV_gain, V_div, V_ac=None, suffix='', autosense=False, ntc=3, lim=1e-6):
+    def __init__(self, 
+                 lockin_handle, 
+                 IV_gain, 
+                 V_div, 
+                 V_ac=None, 
+                 suffix='', 
+                 autosense=False, 
+                 ntc=3, 
+                 lim=1e-6):
         super().__init__('diff_resistance'+suffix,
                          names=('R'+suffix, 'G'+suffix, 'X'+suffix, 'Y'+suffix, 'I_ac'+suffix),
                          shapes=((), (), (), (), ()),
@@ -79,7 +87,16 @@ class diff_R_G_Vbias(qc.MultiParameter):
 # dV/dI
 # Returns the resistance (R), conductance (G), X and Y lockin values
 class diff_R_G_Ibias(qc.MultiParameter):
-    def __init__(self, lockin_handle, R_pre, V_gain, V_ac=None, suffix='', autosense=False, ntc=3, lim=1e-6, Trans_gain=1):
+    def __init__(self, 
+                 lockin_handle, 
+                 R_pre, 
+                 V_gain, 
+                 V_ac=None, 
+                 suffix='', 
+                 autosense=False, 
+                 ntc=3, 
+                 lim=1e-6, 
+                 Trans_gain=1):
         super().__init__('diff_resistance'+suffix,
                          names=('R'+suffix, 'G'+suffix, 'X'+suffix, 'Y'+suffix),
                          shapes=((), (), (), ()),
