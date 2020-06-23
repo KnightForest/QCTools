@@ -46,9 +46,10 @@ class getparam_meta(qc.Parameter):
 class diff_R_G_Vbias(qc.MultiParameter):
     def __init__(self, 
                  lockin_handle, 
-                 IV_gain, 
                  V_div, 
+                 IV_gain, 
                  V_ac=None, 
+                 trans_gain=1,
                  suffix='', 
                  autosense=False, 
                  ntc=3, 
@@ -59,7 +60,7 @@ class diff_R_G_Vbias(qc.MultiParameter):
                          labels=('Differential resistance'+suffix, 'Differential conductance'+suffix, 'Raw voltage X'+suffix, 'Raw voltage Y'+suffix, 'I_ac'+suffix),
                          units=(r'$\Omega$', r'e$^2$/h', 'V', 'V', 'A'),
                          setpoints=((), (), (), (), ()),
-                        docstring='Differential resistance and conductance from current -IVconv> voltage measurement')
+                         docstring='Differential resistance and conductance from current -IVconv> voltage measurement')
         self._IV_gain = IV_gain
         self._V_div = V_div
         self._lockin_handle = lockin_handle
@@ -69,6 +70,7 @@ class diff_R_G_Vbias(qc.MultiParameter):
             self._lockin_handle.amplitude.set(self._V_ac)
         self._ntc = ntc
         self._lim = lim
+        self._trans_gain = trans_gain
     
     def get_raw(self):
         if self._autosense:
@@ -79,7 +81,7 @@ class diff_R_G_Vbias(qc.MultiParameter):
         const_e = 1.60217662e-19
         const_h = 6.62607004e-34
         I_ac = voltageX/self._IV_gain
-        diff_resistance = (self._V_ac/self._V_div )/ I_ac
+        diff_resistance = (self._V_ac*self._trans_gain/self._V_div )/ I_ac
         diff_conductance = 1/diff_resistance / const_e**2 * const_h        
         return (diff_resistance, diff_conductance, voltageX, voltageY, I_ac)
 
@@ -92,18 +94,18 @@ class diff_R_G_Ibias(qc.MultiParameter):
                  R_pre, 
                  V_gain, 
                  V_ac=None, 
+                 trans_gain=1,
                  suffix='', 
                  autosense=False, 
                  ntc=3, 
-                 lim=1e-6, 
-                 Trans_gain=1):
+                 lim=1e-6):
         super().__init__('diff_resistance'+suffix,
                          names=('R'+suffix, 'G'+suffix, 'X'+suffix, 'Y'+suffix),
                          shapes=((), (), (), ()),
                          labels=('Differential resistance'+suffix, 'Differential conductance'+suffix,'Raw voltage X'+suffix, 'Raw voltage Y'+suffix),
                          units=(r'$\Omega$', r'e$^2$/h', 'V', 'V'),
                          setpoints=((), (), (), ()),
-                        docstring='Differential resistance and conductance converted from raw voltage measurement')
+                         docstring='Differential resistance and conductance converted from raw voltage measurement')
         self._R_pre = R_pre
         self._V_gain = V_gain
         self._lockin_handle = lockin_handle
@@ -113,7 +115,7 @@ class diff_R_G_Ibias(qc.MultiParameter):
             self._lockin_handle.amplitude.set(self._V_ac)
         self._ntc = ntc
         self._lim = lim
-        self._Trans_gain = Trans_gain
+        self._trans_gain = trans_gain
     
     def get_raw(self):
         if self._autosense:
@@ -123,7 +125,7 @@ class diff_R_G_Ibias(qc.MultiParameter):
         # some constants
         const_e = 1.60217662e-19
         const_h = 6.62607004e-34        
-        diff_resistance = (voltageX/self._V_gain)/(self._V_ac*self._Trans_gain/(self._R_pre))
+        diff_resistance = (voltageX/self._V_gain)/(self._V_ac*self._trans_gain/(self._R_pre))
         diff_conductance = 1/diff_resistance / const_e**2 * const_h
         return (diff_resistance, diff_conductance, voltageX, voltageY)
 
