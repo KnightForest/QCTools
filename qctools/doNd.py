@@ -1,5 +1,6 @@
 import qcodes as qc
 from qcodes import Station, Measurement
+from qcodes.dataset.plotting import plot_by_id
 import qctools
 import time
 import numpy as np
@@ -159,21 +160,25 @@ def run_measurement(event,
         for i in range(0,len(setpoints)):
             #Check for nonzero axis to apply new setpoints by looking in changesetpoints arrays
             resultlist = [None]*ndims
-            for j in reversed(range(0,ndims)):
+            if i==0: #On first datapoint change set_params from slow to fast axis
+                dimlist = range(0,ndims)
+            else: #On all other datapoints change fast axis first
+                dimlist = reversed(range(0,ndims))
+            for j in dimlist:
                 if not np.isclose(changesetpoints[i,j] , 0, atol=0): # Only set set params that need to be changed
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
-                if i==0:
-                    time.sleep(wait_first_datapoint)
-                for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
-                    if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
-                        if extra_cmd[k] is not None:
-                            if extra_cmd_val[k] is not None:
-                                (extra_cmd[k])(extra_cmd_val[k])
-                            else:
-                                (extra_cmd[k])()
-                    output[k][1] = parameter.get()                
                 resultlist[j] = (param_set[j],setpoints[i,j]) # Make a list of result
+            if i==0: # Add additional waiting time for first measurement point before readout.h
+                time.sleep(wait_first_datapoint)             
+            for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
+                if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
+                    if extra_cmd[k] is not None:
+                        if extra_cmd_val[k] is not None:
+                            (extra_cmd[k])(extra_cmd_val[k])
+                        else:
+                            (extra_cmd[k])()
+                output[k][1] = parameter.get()  
             datasaver.add_result(*resultlist, # Add everything to the database
                                  *output)
             
@@ -313,6 +318,12 @@ def doNd(param_set,
          extra_cmd=None, 
          extra_cmd_val=None,
          wait_first_datapoint=1):
+    if len(param_set) is not len(spaces):
+        errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of spaces is ' + str(len(spaces)) + '.'
+        sys.exit(errstr)
+    if len(param_set) is not len(settle_times):
+        errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of settle_times is ' + str(len(settle_times)) + '.' 
+        sys.exit(errstr)
     # Register measid as global parameter
     global measid
     measid = None
