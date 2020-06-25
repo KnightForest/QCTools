@@ -9,7 +9,7 @@ import json
 
 # You can pass the function the following attributes:
 # dbloc: give it a full database location
-# extractpath: optional, give it a folder to extract to (has to exist). If empty it uses the dbloc path.
+# extractpath: optional, give it a folder to extract to. If empty it uses the dbloc path.
 # ids: optional, array of run ids to extract (i.e. ids = np.arange(2,10) extracts runs 2 to 10). If empty it extracts all
 # overwrite: If False, it does not overwrite files when extracting. Default: False
 # timestamp: If True, adds timestamp to foldername per run. Default: True
@@ -53,9 +53,9 @@ def db_extractor(dbloc=None,
         folderstring = f'Exp' + '{:02d}'.format(i) + f'({expname})' + '-Sample' + f'({samplename})'
         nmeas = exp.last_counter
         if extractpath != None:
-            dbpath = extractpath 
+            dbpath = os.path.abspath(extractpath)
         else:
-            dbpath = exp.path_to_db
+            dbpath = os.path.abspath(dbloc)
         #Looping through all runs inside experiment
         for j in range(1,nmeas+1):
             run = exp.data_set(j)

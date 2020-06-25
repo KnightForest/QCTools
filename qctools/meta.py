@@ -3,8 +3,7 @@ import numpy as np
 import time
 class setparam_meta(qc.Parameter):
     def __init__(self, name, label, scale_param, instrument, maxVal, unit, inter_delay, step):
-        super().__init__(name = "setparam_meta", unit=unit)
-        self.name = name
+        super().__init__(name = name, unit=unit)
         self.label = label
         self._scale_param = float(scale_param)
         self._instrument_channel = instrument
@@ -28,8 +27,7 @@ class setparam_meta(qc.Parameter):
 
 class getparam_meta(qc.Parameter):
     def __init__(self, name, label, scale_param, instrument, unit):
-        super().__init__(name = "setparam_meta", unit=unit)
-        self.name = name
+        super().__init__(name = name, unit=unit)
         self.label = label
         self._scale_param = float(scale_param)
         self._instrument_channel = instrument
