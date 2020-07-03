@@ -96,7 +96,8 @@ def run_measurement(event,
                     meander, 
                     extra_cmd, 
                     extra_cmd_val,
-                    wait_first_datapoint):
+                    wait_first_datapoint,
+                    checkstepinterdelay):
     # Local reference of THIS thread object
     t = current_thread()
     # Thread is alive by default
@@ -116,9 +117,10 @@ def run_measurement(event,
     ### Filling station for snapshotting
     fill_station(param_set,param_meas)
     ### Checking and setting safety rates and delays
-    safetyratesdelays(param_set,spaces)    
+    if checkstepinterdelay:
+        safetyratesdelays(param_set,spaces)    
     
-    meas.write_period = 5
+    meas.write_period = 1
        
     #Make array showing changes between setpoints on axes
     changesetpoints = setpoints - np.roll(setpoints, 1, axis=0)
@@ -317,7 +319,8 @@ def doNd(param_set,
          meander=False, 
          extra_cmd=None, 
          extra_cmd_val=None,
-         wait_first_datapoint=1):
+         wait_first_datapoint=1,
+         checkstepinterdelay=True):
     if len(param_set) is not len(spaces):
         errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of spaces is ' + str(len(spaces)) + '.'
         sys.exit(errstr)
@@ -345,7 +348,8 @@ def doNd(param_set,
                                                         meander, 
                                                         extra_cmd, 
                                                         extra_cmd_val, 
-                                                        wait_first_datapoint))
+                                                        wait_first_datapoint,
+                                                        checkstepinterdelay))
         else:
             p1 = Thread(target = run_zerodim, args=(event, 
                                                     param_meas, 
