@@ -142,3 +142,78 @@ def auto_sensitivity(self, ntc, lim):
             time.sleep(ntc*tc)
         sens = self.sensitivity.get()
         X_val = self.X.get()  
+# Multigate parameter class
+
+class setparam_meta_multigate(qc.Parameter):
+    def __init__(self, 
+                 name, 
+                 label, 
+                 scale_param, 
+                 instrument, 
+                 slope, 
+                 offset, 
+                 maxVal, 
+                 unit, 
+                 inter_delay, 
+                 step, 
+                 metaname, 
+                 step_meta = 1e-3, 
+                 interdelay_meta = 1e-5):
+        super().__init__(name = name, unit=unit)
+        self.name = name
+        self.label = label
+        self._scale_param = np.array(scale_param, dtype=float)
+        self._instrument_channel = np.array(instrument)
+        self._step_meta = step_meta     ###actual step size of meta, set to "None" if you want the instrument to sweep seperately
+        self.step=None                  ###step size for first use or after exceeding maxVal
+        self.inter_delay=interdelay_meta
+        self._slope = np.array(slope, dtype=float)
+        self._offset = np.array(offset, dtype=float)
+        self._maxVal = np.array(maxVal, dtype=float)
+        self._length = len(self._instrument_channel)
+        self.metadata = self._instrument_channel[0].full_name
+        self._once = False
+        for k in range(self._length):           ###step size and inter delay for each instrument
+            instrument[k].step = step[k]
+            instrument[k].inter_delay = inter_delay[k]
+
+    def get_raw(self):
+        return 0
+    
+    def set_raw(self, setval):
+        ### Initialisation for first run after definition, so that gates are swept seperately
+        if (self._once == False):
+            self._once = True
+            self.step =self._step_meta
+        
+        ### Calculate the values to set for all instruments
+        raw_setval = np.divide((self._slope*setval+self._offset),self._scale_param)
+
+        ### Check maxVal and then set
+        can_set = True
+        for k in range(self._length):
+            if abs(raw_setval[k]) > self._maxVal[k]:
+                can_set = False
+                break
+        if can_set == False:
+            raise Exception("Error: One of the set values is limited")
+            self._once = False
+        else: 
+            for k in range(self._length):
+                self._instrument_channel[k].set(raw_setval[k])
+                                
+class get_multigate(qc.MultiParameter):
+    def __init__(self, names, labels, scale_param, instrument, units):
+        super().__init__(name = 'Your_Multigate', names = names, units = units, labels = labels, shapes = ( (),)*len(instrument), setpoints =( (),)*len(instrument) ) 
+        #self.names = names
+        #self.label = label
+        self._scale_param = np.array(scale_param, dtype=float)
+        self._instrument_channel = instrument
+        self._length = len(self._instrument_channel)
+        self.metadata = 'Multigate_Get'
+        
+    def get_raw(self):
+        get_val = np.zeros(self._length)
+        for k in range(self._length):
+            get_val[k] = self._instrument_channel[k].get() * self._scale_param[k]
+        return get_val
