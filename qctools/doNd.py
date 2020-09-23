@@ -193,6 +193,7 @@ def run_measurement(event,
                                    no_folders=False,
                                    suppress_output=True,
                                    useopendbconnection = True)
+                plot_by_id(measid)
                 raise KeyboardInterrupt('User interrupted doNd. All data flushed to database and extracted to *.dat file.')
                 # Break out of for loop
                 break
@@ -363,8 +364,8 @@ def doNd(param_set,
         p2 = Thread(target = run_dbextractor, args=(event,dbextractor_write_interval))
         
         # Kill main thread is subthreads are killed, not necessary here I think..
-        p1.daemon = True
-        p2.daemon = True
+        #p1.daemon = True
+        #p2.daemon = True
         
         #Starting the threads in a try except to catch kernel interrupts
         try:
@@ -393,6 +394,8 @@ def doNd(param_set,
                                        no_folders=False,
                                        suppress_output=True,
                                        useopendbconnection = True)
+    plot_by_id(measid)
+    #sys.exit(0)
     return measid
 
 # Old do1d/2d functions are now only wrappers converting the parameters to a format compatible with the new doNd function.
