@@ -308,6 +308,8 @@ def run_dbextractor(event,dbextractor_write_interval):
 # meander = False/True  ##Sets meandering on first 'slow' axis.
 # extra_cmd = Optional extra command that is run before each measurement paremeter is read out.
 # extra_cmd_val = Optional extra value that of extra_cmd, it will be evaluated as extra_cmd(extra_cmd_val). If extra_cmd_val is not given, extra_cmd() will be run.
+# wait_first_datapoint = number of seconds to wait before measureing the first datapoint
+# checkstepinterdelay = True for False, checks if step and inter_delay have been set for all param_meas
 # doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False, extra_cmd=None, extra_cmd_val=None)
 
 def doNd(param_set, 
