@@ -143,7 +143,7 @@ def run_measurement(event,
         param_measstring += parameter.name + ', '
     
     # Start measurement routine
-    with meas.run() as datasaver:  
+    with meas.run(write_in_background=True) as datasaver:  
         global measid
         measid = datasaver.run_id
 
