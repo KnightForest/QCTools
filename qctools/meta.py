@@ -15,6 +15,8 @@ class setparam_meta(qc.Parameter):
 
     def get_raw(self):
         raw_getval = self._instrument_channel.get()
+        if type(raw_getval) == tuple: # Dirty fix for instrument parameters that return tuples
+            raw_getval = raw_getval[0]
         getval = raw_getval * self._scale_param
         return getval
     
@@ -35,6 +37,8 @@ class getparam_meta(qc.Parameter):
 
     def get_raw(self):
         raw_getval = self._instrument_channel.get()
+        if type(raw_getval) == tuple: # Dirty fix for instrument parameters that return tuples
+            raw_getval = raw_getval[0]
         getval = raw_getval * self._scale_param
         return getval
 
