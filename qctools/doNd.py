@@ -10,6 +10,7 @@ from multiprocessing import Process, Event
 import warnings
 import sys
 from IPython.display import display, clear_output
+from tabulate import tabulate
 
 warnings.simplefilter('always', DeprecationWarning)
 do1d2ddeprecationwarning = '\'do1d\' and \'do2d\' are deprecated and call the general doNd function as a variable wrapper. Please consider directly calling \'doNd\'.'
@@ -97,7 +98,8 @@ def run_measurement(event,
                     extra_cmd, 
                     extra_cmd_val,
                     wait_first_datapoint,
-                    checkstepinterdelay):
+                    checkstepinterdelay,
+                    manualsetpoints):
     # Local reference of THIS thread object
     t = current_thread()
     # Thread is alive by default
@@ -109,11 +111,13 @@ def run_measurement(event,
     meas.name = name
 
     #Generating setpoints
-    if meander == True:
-        setpoints = cartprodmeander(*spaces)
+    if manualsetpoints==False:
+        if meander == True:
+            setpoints = cartprodmeander(*spaces)
+        else:
+            setpoints = cartprod(*spaces)
     else:
-        setpoints = cartprod(*spaces)
-    
+        setpoints = spaces
     ### Filling station for snapshotting
     fill_station(param_set,param_meas)
     ### Checking and setting safety rates and delays
@@ -152,14 +156,14 @@ def run_measurement(event,
         lastwrittime = starttime
         lastprinttime = starttime
 
-        # Getting dimensions and array dimensions and lengths
-        ndims = int(len(spaces))
-        lenarrays = np.zeros(len(spaces))
-        for i in range(0,len(spaces)):
-            lenarrays[i] = int(len(spaces[i]))
+        # Getting dimensionality of measurement
+        ndims = setpoints.shape[1]
+        
+        # Add comment to metadata in database
+        datasaver.dataset.add_metadata('Comment', comment)
         
         # Main loop for setting values
-        for i in range(0,len(setpoints)):
+        for i in range(0,setpoints.shape[0]):
             #Check for nonzero axis to apply new setpoints by looking in changesetpoints arrays
             resultlist = [None]*ndims
             if i==0: #On first datapoint change set_params from slow to fast axis
@@ -168,6 +172,11 @@ def run_measurement(event,
                 dimlist = reversed(range(0,ndims))
             for j in dimlist:
                 if not np.isclose(changesetpoints[i,j] , 0, atol=0): # Only set set params that need to be changed
+                    if i==0 and not t.alive: # Allows killing of thread in-between initialisiation of set_parameters for first datapoint.
+                        event.set() # Trigger closing of run_dbextractor
+                        raise KeyboardInterrupt('User interrupted doNd during initialisation of first setpoint.')
+                        # Break out of for loop
+                        break
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
                 resultlist[j] = (param_set[j],setpoints[i,j]) # Make a list of result
@@ -198,33 +207,35 @@ def run_measurement(event,
                 # Break out of for loop
                 break
             #Time estimation
-            printinterval = 0.05 # Reduce printinterval to save CPU
+            printinterval = 0.075 # Reduce printinterval to save CPU
             now = datetime.datetime.now()
-            if (now-lastprinttime).total_seconds() > printinterval: # Calculate and print time estimation
+            finish =['','']
+            if (now-lastprinttime).total_seconds() > printinterval or i == len(setpoints)-1: # Calculate and print time estimation
                 frac_complete = (i+1)/len(setpoints)
                 duration_in_sec = (now-starttime).total_seconds()/frac_complete
                 elapsed_in_sec = (now-starttime).total_seconds()
                 remaining_in_sec = duration_in_sec-elapsed_in_sec
                 perc_complete = np.round(100*frac_complete,2)
-                progressstring = 'Setpoint ' + str(i+1) + ' of ' + str(len(setpoints)) + ', ' + str(perc_complete) + ' % complete.'
-                durationstring = '      Total duration - ' + str(datetime.timedelta(seconds=np.round(duration_in_sec)))
-                elapsedstring =  '        Elapsed time - ' +  str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))
-                remainingstring ='      Remaining time - ' + str(datetime.timedelta(seconds=np.round(remaining_in_sec)))
-                etastring =      '     ETA - ' + str((datetime.timedelta(seconds=np.round(duration_in_sec))+starttime).strftime('%Y-%m-%d %H:%M:%S'))
-
-                startstring = ' Started - ' + starttime.strftime('%Y-%m-%d %H:%M:%S')
-                runidstring =             '    Starting runid: [' + str(measid) + ']'
-                runnameandcommentstring = '              Name: ' + name + ', Comment: ' + comment
-                setparameterstring =      '  Set parameter(s): ' + str(param_setstring)
-                readoutparameterstring =  'Readout parameters: ' + str(param_measstring)
-                totalstring = runidstring + '\n' + runnameandcommentstring + '\n' + setparameterstring + '\n' + readoutparameterstring + '\n\n' + progressstring + '\n' + startstring + '\n' +  etastring + '\n' + durationstring + '\n' + elapsedstring + '\n' + remainingstring 
                 clear_output(wait=True)
-                print(totalstring)
+                if i == len(setpoints)-1:
+                    finish[0] = 'Finished: ' + str((now).strftime('%Y-%m-%d'))
+                    finish[1] = str((now).strftime('%H:%M:%S'))
+                l1 = tabulate([['Starting runid:', str(measid)],
+                               ['Name: ' + name, 'Comment: ' + comment],
+                               ['Starting runid:', str(measid)],
+                               ['Set parameter(s):', str(param_setstring)],
+                               ['Readout parameter(s):', str(param_measstring)],
+                               ['________________________' ,'____________________________________________________________________'],
+                               ['Setpoint: ' + str(i+1) + ' of ' + str(len(setpoints)), '%.2f' % perc_complete + ' % complete.'],
+                               ['Started: ' + starttime.strftime('%Y-%m-%d'), starttime.strftime('%H:%M:%S')],
+                               ['ETA: ' + str((datetime.timedelta(seconds=np.round(duration_in_sec))+starttime).strftime('%Y-%m-%d')), str((datetime.timedelta(seconds=np.round(duration_in_sec))+starttime).strftime('%H:%M:%S'))],
+                               [finish[0],finish[1]],
+                               ['Total duration:', str(datetime.timedelta(seconds=np.round(duration_in_sec)))],
+                               ['Elapsed time:', str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))],
+                               ['Remaining time:', str(datetime.timedelta(seconds=np.round(remaining_in_sec)))],
+                               ], colalign=('right','left'))
+                print(l1)
                 lastprinttime = now
-
-            datasaver.dataset.add_metadata('Comment', comment) # Add comment to metadata in database
-        finishstring =   'Finished - ' + str((now).strftime('%Y-%m-%d %H:%M:%S')) # Print finishing time
-        print(finishstring)
         event.set() # Trigger closing of run_dbextractor
 
 def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
@@ -302,6 +313,9 @@ def run_dbextractor(event,dbextractor_write_interval):
 # Example:
 # param_set = [set_param1, set_param2, ... etc]
 # spaces = [space1, space2, ... etc]
+    # ! functionality of spaces can be modified by giving the manualsetpoints=True argument
+    # Now, spaces should be a (n,m) dimensional array where 'n' is the number of setpoints and 'm' is the dimensionality of the measurment, i.e.,
+    # every 'n' represents a setpoint in the measurement where 'm' contain a value for all set_parameters
 # settle_times = [settle_time1, settle_time2, ... etc]
 # param_meas = [meas_param1, .. etc]
 # name = 'Name of this measurement'
@@ -323,10 +337,21 @@ def doNd(param_set,
          extra_cmd=None, 
          extra_cmd_val=None,
          wait_first_datapoint=1,
-         checkstepinterdelay=True):
-    if len(param_set) is not len(spaces):
-        errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of spaces is ' + str(len(spaces)) + '.'
-        sys.exit(errstr)
+         checkstepinterdelay=True,
+         manualsetpoints=False):
+    if manualsetpoints == False:
+        if len(param_set) is not len(spaces):
+            errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of spaces is ' + str(len(spaces)) + '.'
+            sys.exit(errstr)
+    if manualsetpoints == True:
+        print(type(spaces),str(type(spaces)))
+        if isinstance(spaces,np.ndarray) == False:
+            errstr = 'Error: spaces is of type '+ str(type(spaces)) +' not a numpy error as required when manualsetpoints=True.'    
+            sys.exit(errstr)
+        elif len(param_set) is not spaces.shape[1]:
+            errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while dimension of spaces array is ' + str(spaces.shape[1]) + '.'
+            sys.exit(errstr)
+    
     if len(param_set) is not len(settle_times):
         errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of settle_times is ' + str(len(settle_times)) + '.' 
         sys.exit(errstr)
@@ -352,7 +377,8 @@ def doNd(param_set,
                                                         extra_cmd, 
                                                         extra_cmd_val, 
                                                         wait_first_datapoint,
-                                                        checkstepinterdelay))
+                                                        checkstepinterdelay,
+                                                        manualsetpoints))
         else:
             p1 = Thread(target = run_zerodim, args=(event, 
                                                     param_meas, 

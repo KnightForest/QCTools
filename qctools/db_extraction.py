@@ -4,6 +4,7 @@ import qcodes.dataset.descriptions.versioning.serialization as sz
 import os
 import numpy as np
 import json
+import datetime
 
 # Extract *.db file into conventient folder structure with proper naming. Extracts measurement snapshots if available
 
@@ -27,7 +28,8 @@ def db_extractor(dbloc=None,
                  newline_slowaxes = True,
                  no_folders = False,
                  suppress_output = False,
-                 useopendbconnection = False):
+                 useopendbconnection = False,
+                 checktimes = False): # Only for debugging purposes
 
     
     if not suppress_output:
@@ -43,7 +45,11 @@ def db_extractor(dbloc=None,
         configuration['core']['db_location'] = dbloc
         configuration.save_to_home()
         initialise_database()
-    
+ 
+    starttime = datetime.datetime.now()
+
+    times = []
+    times.append(datetime.datetime.now())
     #Looping through all exps inside database
     for i in range(1,len(qc.dataset.experiment_container.experiments())+1,1):
         #print('Expid:',i)
@@ -57,6 +63,9 @@ def db_extractor(dbloc=None,
         else:
             dbpath = os.path.abspath(dbloc)
         #Looping through all runs inside experiment
+        if checktimes:
+            times.append(datetime.datetime.now())
+            print('Loaded db and exp ',times[-1]-times[-2])
         for j in range(1,nmeas+1):
             run = exp.data_set(j)
             runid = run.run_id
@@ -108,6 +117,9 @@ def db_extractor(dbloc=None,
                             depsind.append(param_names.index(deps[o]))
                         depend_dict.update([(n, depsind)])
                         n = n + 1
+                if checktimes:
+                    times.append(datetime.datetime.now())
+                    print('Determined meas and set params ',times[-1]-times[-2])
                 #Length of final result_dict determines number of files
                 n=0                 
                 for i in range(0,len(result_dict)): # len(result_dict) gives number of independent measurement, i.e. .dat files
@@ -148,13 +160,17 @@ def db_extractor(dbloc=None,
                     fullpathjson = os.path.join(folder,filenamejson)
                     if not os.path.exists(folder):
                         os.makedirs(folder) 
+
+                    if checktimes:
+                        times.append(datetime.datetime.now())
+                        print('Constructing file and folder names ' ,times[-1]-times[-2])
                     
                     #Check if file exists already
                     if os.path.isfile(fullpath) and overwrite == False:
                         #print('File found, skipping extraction')
                         pass
                     else:
-                        #Construct dat file header
+                        #Construct dat file header                     
                         header = ''
                         header += f"Run #{runid}: {runname}, Experiment: {expname}, Sample name: {samplename}, Number of values: " + str(run.number_of_results) + "\n"
                         try:
@@ -163,14 +179,31 @@ def db_extractor(dbloc=None,
                         except:
                             header += "\n"
                         
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('Before reading from db ',times[-1]-times[-2])
+                                                
                         all_param_data = run.get_parameter_data()
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('run.get_parameter_data() ',times[-1]-times[-2])
+                        
                         #run_matrix2 = []    
                         meas_params = result_dict[i] # Collect measurement params
                         set_params = depend_dict[i]  # Collect depend params
                         setdata = run.get_parameter_data(param_names[meas_params[0]])
+                        
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('run.get_parameter_data(), only setdata ',times[-1]-times[-2])
+
                         headernames = ''
                         headerlabelsandunits = ''
                         
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('Db read out ',times[-1]-times[-2])
+
                         # Pre-allocate data array                       
                         lset = len(set_params)
                         lmeas = len(meas_params)
@@ -180,7 +213,7 @@ def db_extractor(dbloc=None,
                         run_matrix.fill(np.nan)
                         # Collect depends (set axes) columns
                         colcounter=0
-                        for j in set_params:
+                        for j in set_params: 
                             #run_matrix2.append(setdata[param_names[meas_params[0]]][param_names[j]])
                             #print(setdata[param_names[meas_params[0]]][param_names[j]])
                             #print((all_param_data[param_names[meas_params[0]]][param_names[j]]))
@@ -191,6 +224,9 @@ def db_extractor(dbloc=None,
                             headerlabelsandunits += parameters[j].label + " (" + parameters[j].unit +")" + "\t"
                             colcounter=colcounter+1
                         # Collect measurement (meas axes) columns
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('Set_params in runmatrix ',times[-1]-times[-2])
                         
                         for k in meas_params:
                             #measdata = run.get_parameter_data(param_names[k])
@@ -206,6 +242,11 @@ def db_extractor(dbloc=None,
                             headernames += parameters[k].name + "\t"
                             headerlabelsandunits += parameters[k].label + " (" + parameters[k].unit +")" + "\t"
                             colcounter=colcounter+1
+                        
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('Meas_params in runmatrix ',times[-1]-times[-2])
+                        
                         header += headernames + '\n'
                         header += headerlabelsandunits
                         # Stick'em together
@@ -222,21 +263,30 @@ def db_extractor(dbloc=None,
                         f = open(file, "wb")
                         np.savetxt(f,np.array([]), header = header)
 
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('Opening txt file and saving header ',times[-1]-times[-2])
                         # Routine for properly slicing the slow axes (works for infinite dimensions)
                         slicearray = np.array([]).astype(int)
                         if newline_slowaxes == True:
                             for i in range(0,len(set_params)-1):
                                 slicearray = np.concatenate((slicearray, np.where(run_matrix[:-1,i] != run_matrix[1:,i])[0]+1))
                                 slicearray = np.unique(slicearray)
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('newline_slowaxes time consumption ',times[-1]-times[-2])
                         
                         vsliced=np.split(run_matrix,slicearray, axis=0)
-                        for i in range(0,len(vsliced)):
+                        for i in range(0,len(vsliced)): # This is just one write action if newline_slowaxes is turned off (and a bit faster then)
                             np.savetxt(f,vsliced[i],delimiter='\t')
                             if i != len(vsliced)-1:
                                 linestr = "\n"
                                 f.write(linestr.encode())
                         f.close()
-                        
+                        if checktimes:
+                            times.append(datetime.datetime.now())
+                            print('Writing of the textfile ',times[-1]-times[-2])
+
                         # Saving of snapshot + run description to JSON file
                         with open(fullpathjson, 'w') as f:
                             if run.snapshot and run.description:
@@ -249,6 +299,10 @@ def db_extractor(dbloc=None,
                                     print('Warning: Measurement {ruinid} has no snapshot or run description. Axes for plotting cannot be extracted.')
                             json.dump(total_json, f, indent = 4)
                     n = n + 1
+                    if checktimes:
+                        times.append(datetime.datetime.now())
+                        print('Total time ',times[-1]-times[0])
+
     if useopendbconnection == False:
         configuration['core']['db_location'] = previously_opened_db
         configuration.save_to_home()
