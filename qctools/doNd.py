@@ -84,6 +84,7 @@ def cartprodmeander(*arrays):
                      np.roll(np.arange(N + 1), -1)).reshape(-1, N)
     s = int(len(fullmesh)/len(arrays[-1])/2)
     for i in range(0,s):
+        # Most unreadable line of code in the world, but it does the meandering of the setpoints somehow...
         fullmesh[:,-1][(2*i+1)*len(arrays[-1]):(2*i+2)*len(arrays[-1])]=fullmesh[:,-1][(2*i+1)*len(arrays[-1]):(2*i+2)*len(arrays[-1])][::-1]
     return fullmesh
 
@@ -220,7 +221,7 @@ def run_measurement(event,
                 if i == len(setpoints)-1:
                     finish[0] = 'Finished: ' + str((now).strftime('%Y-%m-%d'))
                     finish[1] = str((now).strftime('%H:%M:%S'))
-                l1 = tabulate([['Starting runid:', str(measid)],
+                l1 = tabulate([['Starting runid:', str(measid)], # Time estimation now in properly aligned table format
                                ['Name: ' + name, 'Comment: ' + comment],
                                ['Starting runid:', str(measid)],
                                ['Set parameter(s):', str(param_setstring)],
@@ -409,8 +410,8 @@ def doNd(param_set,
             p1.alive = False
             p2.alive = False
             # Block until child thread is joined back to the parent
-            p1.join()
-            p2.join()
+            p1.join(5)
+            p2.join(5)
             # Exit with error code
             sys.exit(e)
     qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
