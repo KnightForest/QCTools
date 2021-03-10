@@ -26,7 +26,6 @@ def unique(list1):
         # check if exists in unique_list or not 
         if x not in unique_list: 
             unique_list.append(x) 
-    # print list 
     return unique_list 
 
 def fill_station(param_set, param_meas):
@@ -345,7 +344,6 @@ def doNd(param_set,
             errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of spaces is ' + str(len(spaces)) + '.'
             sys.exit(errstr)
     if manualsetpoints == True:
-        print(type(spaces),str(type(spaces)))
         if isinstance(spaces,np.ndarray) == False:
             errstr = 'Error: spaces is of type '+ str(type(spaces)) +' not a numpy error as required when manualsetpoints=True.'    
             sys.exit(errstr)
