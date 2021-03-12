@@ -408,7 +408,7 @@ def doNd(param_set,
             p1.alive = False
             p2.alive = False
             # Block until child thread is joined back to the parent
-            p1.join(5)
+            p1.join()
             p2.join(5)
             # Exit with error code
             sys.exit(e)
