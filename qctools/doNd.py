@@ -134,17 +134,25 @@ def run_measurement(event,
    
     # Registering set parameters
     param_setstring = ''
-    for parameter in param_set:
+    param_setnames = [None]*len(param_set)
+    param_setunits = [None]*len(param_set)
+    for i,parameter in enumerate(param_set):
         meas.register_parameter(parameter)
         param_setstring += parameter.name + ', '
-    output = [] 
+        param_setnames[i] = parameter.name
+        param_setunits[i] = parameter.unit
     
-    # Registering readout parameters
+    output = [None]*len(param_meas) 
+        # Registering readout parameters
     param_measstring = ''
-    for parameter in param_meas:
+    param_measnames = [None]*len(param_meas)
+    param_measunits = [None]*len(param_meas)
+    for i, parameter in enumerate(param_meas):
         meas.register_parameter(parameter, setpoints=(*param_set,))
-        output.append([parameter, None])   
+        output[i]= [parameter, None]
         param_measstring += parameter.name + ', '
+        param_measnames[i] = parameter.name
+        param_measunits[i] = parameter.unit
     
     # Start measurement routine
     with meas.run() as datasaver:  
@@ -180,7 +188,7 @@ def run_measurement(event,
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
                 resultlist[j] = (param_set[j],setpoints[i,j]) # Make a list of result
-            if i==0: # Add additional waiting time for first measurement point before readout.h
+            if i==0: # Add additional waiting time for first measurement point before readout.
                 time.sleep(wait_first_datapoint)             
             for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
                 if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
@@ -189,10 +197,13 @@ def run_measurement(event,
                             (extra_cmd[k])(extra_cmd_val[k])
                         else:
                             (extra_cmd[k])()
-                output[k][1] = parameter.get()  
+                output[k][1] = parameter.get()
             datasaver.add_result(*resultlist, # Add everything to the database
                                  *output)
-            
+            setvals = list(zip(param_setnames,[f"{x:.{6}}" for x in setpoints[i,:]],param_setunits))
+            measvals = list(zip(param_measnames,[f"{x:.{6}}" for x in [row[1] for row in output]] ,param_measunits))
+            #print(setvals)
+            #print(measvals)
             if not t.alive: # Check if user tried to kill the thread by keyboard interrupt, if so kill it
                 event.set() # Trigger closing of run_dbextractor
                 qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(),  # Run db_extractor once more
@@ -207,7 +218,7 @@ def run_measurement(event,
                 # Break out of for loop
                 break
             #Time estimation
-            printinterval = 0.075 # Reduce printinterval to save CPU
+            printinterval = 0.025 # Increase printinterval to save CPU
             now = datetime.datetime.now()
             finish =['','']
             if (now-lastprinttime).total_seconds() > printinterval or i == len(setpoints)-1: # Calculate and print time estimation
@@ -220,12 +231,15 @@ def run_measurement(event,
                 if i == len(setpoints)-1:
                     finish[0] = 'Finished: ' + str((now).strftime('%Y-%m-%d'))
                     finish[1] = str((now).strftime('%H:%M:%S'))
-                l1 = tabulate([['Starting runid:', str(measid)], # Time estimation now in properly aligned table format
-                               ['Name: ' + name, 'Comment: ' + comment],
+
+                l1 = tabulate([['----------------------' ,'-------------------------------------------------'],
+                               ['Starting runid:', str(measid)], # Time estimation now in properly aligned table format
+                               ['Name:', name], 
+                               ['Comment:', comment],
                                ['Starting runid:', str(measid)],
-                               ['Set parameter(s):', str(param_setstring)],
-                               ['Readout parameter(s):', str(param_measstring)],
-                               ['________________________' ,'____________________________________________________________________'],
+                               ['Set parameter(s):', tabulate(setvals, tablefmt='plain', colalign=('left','left','left'))],
+                               ['Readout parameter(s):', tabulate(measvals, tablefmt='plain', colalign=('left','left','left'))],
+                               ['______________________' ,'_________________________________________________'],
                                ['Setpoint: ' + str(i+1) + ' of ' + str(len(setpoints)), '%.2f' % perc_complete + ' % complete.'],
                                ['Started: ' + starttime.strftime('%Y-%m-%d'), starttime.strftime('%H:%M:%S')],
                                ['ETA: ' + str((datetime.timedelta(seconds=np.round(duration_in_sec))+starttime).strftime('%Y-%m-%d')), str((datetime.timedelta(seconds=np.round(duration_in_sec))+starttime).strftime('%H:%M:%S'))],
@@ -233,14 +247,13 @@ def run_measurement(event,
                                ['Total duration:', str(datetime.timedelta(seconds=np.round(duration_in_sec)))],
                                ['Elapsed time:', str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))],
                                ['Remaining time:', str(datetime.timedelta(seconds=np.round(remaining_in_sec)))],
-                               ], colalign=('right','left'))
+                               ], colalign=('right','left'), tablefmt='plain')
                 print(l1)
                 lastprinttime = now
         event.set() # Trigger closing of run_dbextractor
 
 def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
     # Local reference of THIS thread object
-    print('Running 0-dimensional measurement, time estimation not available.')
     t = current_thread()
     # Thread is alive by default
     t.alive = True
@@ -254,7 +267,6 @@ def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
     fill_station_zerodim(param_meas)
     
     meas.write_period = 0.5
-    
     output = [] 
     # Registering readout parameters
     param_measstring = ''
@@ -270,8 +282,17 @@ def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
 
         # Start various timers
         starttime = datetime.datetime.now()
-        lastwrittime = starttime
-        lastprinttime = starttime
+        l1 = tabulate([['----------------------' ,'-------------------------------------------------'],
+                       ['Running 0-dimensional measurement,', 'time estimation not available.'], # Time estimation now in properly aligned table format
+                       ['Starting runid:', str(measid)], # Time estimation now in properly aligned table format
+                       ['Name:', name], 
+                       ['Comment:', comment],
+                       ['Starting runid:', str(measid)],
+                       ['Readout parameter(s):', str(param_measstring)],
+                       ['______________________' ,'_________________________________________________'],
+                       ['Started: ' + starttime.strftime('%Y-%m-%d'), starttime.strftime('%H:%M:%S')],
+                       ], colalign=('right','left'), tablefmt='plain')
+        print(l1)
 
         # Getting dimensions and array dimensions and lengths
         # Main loop for setting values
@@ -282,8 +303,26 @@ def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
                 output[k][1] = parameter.get()                
         datasaver.add_result(*output)
         datasaver.dataset.add_metadata('Comment', comment) # Add comment to metadata in database
-        finishstring =   'Finished - ' + str((datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S')) # Print finishing time
-        print(finishstring)
+        now = datetime.datetime.now()
+        elapsed_in_sec = (now-starttime).total_seconds()
+        clear_output(wait=True)
+        l1 = tabulate([['---------------------------------' ,'-------------------------------------------'],
+                       ['Running 0-dimensional measurement,', 'time estimation not available.'], # Time estimation now in properly aligned table format
+                       ['Starting runid:', str(measid)], # Time estimation now in properly aligned table format
+                       ['Name:', name], 
+                       ['Comment:', comment],
+                       ['Starting runid:', str(measid)],
+                       ['Readout parameter(s):', str(param_measstring)],
+                       ['_________________________________' ,'___________________________________________'],
+                       ['Started: ' + starttime.strftime('%Y-%m-%d'), starttime.strftime('%H:%M:%S')],
+                       ['Finished: ' + str((now).strftime('%Y-%m-%d')),str((now).strftime('%H:%M:%S'))],
+                       ['Total duration:', str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))],
+                       ], colalign=('right','left'), tablefmt='plain')
+        print(l1)
+
+
+        #finishstring =   'Finished - ' + str((datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S')) # Print finishing time
+        #print(finishstring)
         event.set() # Trigger closing of run_dbextractor
 
 def run_dbextractor(event,dbextractor_write_interval):
@@ -419,9 +458,12 @@ def doNd(param_set,
                                        no_folders=False,
                                        suppress_output=True,
                                        useopendbconnection = True)
-    plot_by_id(measid)
+    if len(param_set) > 2:
+        print('QCoDeS currently does not support plotting of higher dimensional data, plotting skipped.')
+    else:
+        plot_by_id(measid)
     #sys.exit(0)
-    return measid
+    #return measid
 
 # Old do1d/2d functions are now only wrappers converting the parameters to a format compatible with the new doNd function.
 def do1d(param_set, start, stop, num_points, delay=None, param_meas=[], name='', comment=''):
