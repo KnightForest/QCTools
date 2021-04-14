@@ -152,7 +152,10 @@ def run_measurement(event,
         output[i]= [parameter, None]
         param_measstring += parameter.name + ', '
         param_measnames[i] = parameter.name
-        param_measunits[i] = parameter.unit
+        if hasattr(parameter, 'unit'):
+            param_measunits[i] = parameter.unit
+        else:
+            param_measunits[i] = ''
     
     # Start measurement routine
     with meas.run() as datasaver:  
