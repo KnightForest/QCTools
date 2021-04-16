@@ -201,9 +201,14 @@ def run_measurement(event,
             datasaver.add_result(*resultlist, # Add everything to the database
                                  *output)
             setvals = list(zip(param_setnames,[f"{x:.{6}}" for x in setpoints[i,:]],param_setunits))
-            measvals = list(zip(param_measnames,[f"{x:.{6}}" for x in [row[1] for row in output]] ,param_measunits))
-            #print(setvals)
-            #print(measvals)
+            outputparsed = [None]*len(param_meas)
+            for k,x in enumerate([row[1] for row in output]):
+                if isinstance(x, float):
+                    outputparsed[k] = f"{x:.{6}}"
+                else:
+                    outputparsed[k] = 'Instr. returns multiple vals.'        
+            measvals = list(zip(param_measnames,outputparsed ,param_measunits))    
+
             if not t.alive: # Check if user tried to kill the thread by keyboard interrupt, if so kill it
                 event.set() # Trigger closing of run_dbextractor
                 qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(),  # Run db_extractor once more
