@@ -64,11 +64,11 @@ def safetyratesdelays(param_set,spaces):
     for i in range(0,len(param_set)):
         if param_set[i].step == 0 or param_set[i].step == None:
             if len(spaces[i])>1:
-                print('Warning, \'step\' attribute for set parameter ', param_set[i].name ,' undefined. Defaulting to minimum measurement stepsize :{}'.format(param_set[i].step) )
                 param_set[i].step = np.min(np.absolute(np.diff(spaces[i])[np.where(np.diff(spaces[i])!=0)]))
+                print('Warning, \'step\' attribute for set parameter ', param_set[i].name ,' undefined. Defaulting to minimum measurement stepsize :{}'.format(param_set[i].step) )
         if param_set[i].inter_delay == 0 or param_set[i].inter_delay == None:
-            print('Warning, \'inter_delay\' attribute for set parameter ', param_set[i].name ,' undefined. Defaulting to \'5e-2\' s.')
             param_set[i].inter_delay = 5e-2
+            print('Warning, \'inter_delay\' attribute for set parameter ', param_set[i].name ,' undefined. Defaulting to \'5e-2\' s.')
 
 
 def cartprod(*arrays):
