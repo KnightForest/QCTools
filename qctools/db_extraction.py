@@ -153,9 +153,9 @@ def db_extractor(dbloc=None,
                             filenamejson = "run_snapshot.json"
                         folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)
                     
-                    folder = folder.replace(" ", "_")
-                    filenamep2 = filenamep2.replace(" ", "_")
-                    filenamejson = filenamejson.replace(" ", "_")
+                    folder = folder.replace(" ", "_").replace('?','_')
+                    filenamep2 = filenamep2.replace(" ", "_").replace('?','_')
+                    filenamejson = filenamejson.replace(" ", "_").replace('?','_')
                     fullpath = os.path.join(folder,filenamep2)
                     fullpathjson = os.path.join(folder,filenamejson)
                     if not os.path.exists(folder):
