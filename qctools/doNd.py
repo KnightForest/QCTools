@@ -147,16 +147,25 @@ def run_measurement(event,
     param_measstring = ''
     param_measnames = [None]*len(param_meas)
     param_measunits = [None]*len(param_meas)
+    param_measnames_sub = [None]*len(param_meas)
+    paramtype = [None]*len(param_meas)
     for i, parameter in enumerate(param_meas):
         meas.register_parameter(parameter, setpoints=(*param_set,))
         output[i]= [parameter, None]
         param_measstring += parameter.name + ', '
         param_measnames[i] = parameter.name
-        if hasattr(parameter, 'unit'):
+        if isinstance(parameter, qc.instrument.parameter.ParameterWithSetpoints):
             param_measunits[i] = parameter.unit
-        else:
-            param_measunits[i] = ''
-    
+            param_measnames_sub[i] = ''
+            paramtype[i] = 'ParameterWithSetpoints'
+        elif isinstance(parameter, qc.instrument.parameter.MultiParameter):
+            param_measunits[i] = parameter.units
+            param_measnames_sub[i] = parameter.names
+            paramtype[i] = 'MultiParameter'
+        elif isinstance(parameter, qc.instrument.parameter.Parameter):
+            param_measunits[i] = parameter.unit
+            paramtype[i] = 'Parameter'
+
     # Start measurement routine
     with meas.run() as datasaver:  
         global measid
@@ -206,11 +215,16 @@ def run_measurement(event,
             setvals = list(zip(param_setnames,[f"{x:.{6}}" for x in setpoints[i,:]],param_setunits))
             outputparsed = [None]*len(param_meas)
             for k,x in enumerate([row[1] for row in output]):
-                if isinstance(x, float):
-                    outputparsed[k] = f"{x:.{6}}"
-                else:
-                    outputparsed[k] = 'Instr. returns multiple vals.'        
-            measvals = list(zip(param_measnames,outputparsed ,param_measunits))    
+                if paramtype[k] == 'MultiParameter':
+                    valsparsed = [None]*len(x)
+                    for l,y in enumerate(x):
+                        valsparsed[l] = f"{y:.{6}}"
+                    outputparsed[k] = tabulate(list(zip(param_measnames_sub[k],valsparsed,param_measunits[k])), tablefmt='plain', colalign=('left','left','left'))
+                if paramtype[k] == 'Parameter':
+                    outputparsed[k] = tabulate([[f"{x:.{6}}",param_measunits[k]]], tablefmt='plain')
+                if paramtype[k] == 'ParameterWithSetpoints':
+                    outputparsed[k] = '{Parameter with setpoints, not shown.}'
+            measvals = list(zip(param_measnames,outputparsed))
 
             if not t.alive: # Check if user tried to kill the thread by keyboard interrupt, if so kill it
                 event.set() # Trigger closing of run_dbextractor
@@ -246,7 +260,7 @@ def run_measurement(event,
                                ['Comment:', comment],
                                ['Starting runid:', str(measid)],
                                ['Set parameter(s):', tabulate(setvals, tablefmt='plain', colalign=('left','left','left'))],
-                               ['Readout parameter(s):', tabulate(measvals, tablefmt='plain', colalign=('left','left','left'))],
+                               ['Readout parameter(s):', tabulate(measvals, tablefmt='plain', colalign=('left','left'))],
                                ['______________________' ,'_________________________________________________'],
                                ['Setpoint: ' + str(i+1) + ' of ' + str(len(setpoints)), '%.2f' % perc_complete + ' % complete.'],
                                ['Started: ' + starttime.strftime('%Y-%m-%d'), starttime.strftime('%H:%M:%S')],
@@ -327,19 +341,12 @@ def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
                        ['Total duration:', str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))],
                        ], colalign=('right','left'), tablefmt='plain')
         print(l1)
-
-
-        #finishstring =   'Finished - ' + str((datetime.datetime.now()).strftime('%Y-%m-%d %H:%M:%S')) # Print finishing time
-        #print(finishstring)
         event.set() # Trigger closing of run_dbextractor
 
 def run_dbextractor(event,dbextractor_write_interval):
     #Controls how often the measurement is written to *.dat file
     lastwrittime = datetime.datetime.now()
     while event.is_set()==False:
-        #print(lastwrittime)
-        #print(dbextractor_write_interval)
-        #print((datetime.datetime.now()-lastwrittime).total_seconds())
         timepassedsincelastwrite = (datetime.datetime.now()-lastwrittime).total_seconds()
         if timepassedsincelastwrite > dbextractor_write_interval and measid is not None:
             if timepassedsincelastwrite > 1.5*dbextractor_write_interval:
@@ -406,7 +413,7 @@ def doNd(param_set,
     measid = None
 
     # Useless if statement, because why not        
-    if __name__ is not '__main__':
+    if __name__ != '__main__':
         #Create Event
         event = Event() # Create event shared by threads
         

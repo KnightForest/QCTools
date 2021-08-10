@@ -207,18 +207,13 @@ def db_extractor(dbloc=None,
                         # Pre-allocate data array                       
                         lset = len(set_params)
                         lmeas = len(meas_params)
-                        lval = len(setdata[param_names[meas_params[0]]][param_names[0]])
-                        #print(lset,lmeas,lval)
-                        run_matrix=np.empty([len(setdata[param_names[meas_params[0]]][param_names[0]]),lset+lmeas])
+                        lval = len((setdata[param_names[meas_params[0]]][param_names[0]]).flatten())
+                        run_matrix=np.empty([lval,lset+lmeas])
                         run_matrix.fill(np.nan)
                         # Collect depends (set axes) columns
                         colcounter=0
                         for j in set_params: 
-                            #run_matrix2.append(setdata[param_names[meas_params[0]]][param_names[j]])
-                            #print(setdata[param_names[meas_params[0]]][param_names[j]])
-                            #print((all_param_data[param_names[meas_params[0]]][param_names[j]]))
-                            #run_matrix[:,colcounter]=setdata[param_names[meas_params[0]]][param_names[j]]
-                            setdata = all_param_data[param_names[meas_params[0]]][param_names[j]]
+                            setdata = (all_param_data[param_names[meas_params[0]]][param_names[j]]).flatten()
                             run_matrix[0:len(setdata),colcounter]= setdata
                             headernames += parameters[j].name + "\t"
                             headerlabelsandunits += parameters[j].label + " (" + parameters[j].unit +")" + "\t"
@@ -229,15 +224,7 @@ def db_extractor(dbloc=None,
                             print('Set_params in runmatrix ',times[-1]-times[-2])
                         
                         for k in meas_params:
-                            #measdata = run.get_parameter_data(param_names[k])
-                            #print(param_names[k])
-                            #print(measdata)
-                            #print(all_param_data)
-                            #run_matrix2.append(measdata[param_names[k]][param_names[k]])
-                            #print(measdata[param_names[k]][param_names[k]])
-                            #print(all_param_data[param_names[k]][param_names[k]])
-                            #run_matrix[:,colcounter]=measdata[param_names[k]][param_names[k]]
-                            measdata = all_param_data[param_names[k]][param_names[k]]
+                            measdata = (all_param_data[param_names[k]][param_names[k]]).flatten()
                             run_matrix[0:len(measdata),colcounter]=measdata
                             headernames += parameters[k].name + "\t"
                             headerlabelsandunits += parameters[k].label + " (" + parameters[k].unit +")" + "\t"
@@ -249,11 +236,7 @@ def db_extractor(dbloc=None,
                         
                         header += headernames + '\n'
                         header += headerlabelsandunits
-                        # Stick'em together
-                        #run_matrix2 = np.vstack(run_matrix2)
-                        #run_matrix2 = np.flipud(np.rot90(run_matrix2, k=-1, axes=(1,0)))
-                        #print(run_matrix,run_matrix.shape)
-                        #print(run_matrix2,run_matrix2.shape)
+
                         # Confirming function is a good boy
                         if not suppress_output:
                             print("Saving measurement with id " + str(runid) +  " to  "+ fullpath)
