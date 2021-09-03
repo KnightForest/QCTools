@@ -171,11 +171,6 @@ def run_measurement(event,
         global measid
         measid = datasaver.run_id
 
-        # Start various timers
-        starttime = datetime.datetime.now()
-        lastwrittime = starttime
-        lastprinttime = starttime
-
         # Getting dimensionality of measurement
         ndims = setpoints.shape[1]
         
@@ -200,8 +195,12 @@ def run_measurement(event,
                     param_set[j].set(setpoints[i,j])
                     time.sleep(settle_times[j]) # Apply appropriate settle_time
                 resultlist[j] = (param_set[j],setpoints[i,j]) # Make a list of result
-            if i==0: # Add additional waiting time for first measurement point before readout.
-                time.sleep(wait_first_datapoint)             
+            if i==0: # Add additional waiting time for first measurement point before readout and start timers
+                time.sleep(wait_first_datapoint)
+                # Start various timers
+                starttime = datetime.datetime.now() + datetime.timedelta(0,-1)
+                lastwrittime = starttime
+                lastprinttime = starttime             
             for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
                 if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
                     if extra_cmd[k] is not None:
