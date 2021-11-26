@@ -217,7 +217,16 @@ def run_measurement(event,
                 if paramtype[k] == 'MultiParameter':
                     valsparsed = [None]*len(x)
                     for l,y in enumerate(x):
-                        valsparsed[l] = f"{y:.{6}}"
+                        if isinstance(y, (list,tuple,np.ndarray)):
+                            if len(y) > 5:
+                                vals = ['{:.6f}'.format(x) for x in y[0:5]]
+                                vals.append('.......')
+                            else:
+                                vals = ['{:.6f}'.format(x) for x in y]
+                            newvals = [[vals[i]] for i in range(0,len(vals))]
+                            valsparsed[l] = tabulate(newvals,tablefmt='plain') 
+                        else:
+                            valsparsed[l] = f"{y:.{6}}"
                     outputparsed[k] = tabulate(list(zip(param_measnames_sub[k],valsparsed,param_measunits[k])), tablefmt='plain', colalign=('left','left','left'))
                 if paramtype[k] == 'Parameter':
                     outputparsed[k] = tabulate([[f"{x:.{6}}",param_measunits[k]]], tablefmt='plain')
