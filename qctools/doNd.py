@@ -266,7 +266,6 @@ def run_measurement(event,
                                ['Starting runid:', str(measid)], # Time estimation now in properly aligned table format
                                ['Name:', name], 
                                ['Comment:', comment],
-                               ['Starting runid:', str(measid)],
                                ['Set parameter(s):', tabulate(setvals, tablefmt='plain', colalign=('left','left','left'))],
                                ['Readout parameter(s):', tabulate(measvals, tablefmt='plain', colalign=('left','left'))],
                                ['______________________' ,'_________________________________________________'],
