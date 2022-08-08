@@ -99,7 +99,8 @@ def run_measurement(event,
                     extra_cmd_val,
                     wait_first_datapoint,
                     checkstepinterdelay,
-                    manualsetpoints):
+                    manualsetpoints,
+                    snapshot):
     # Local reference of THIS thread object
     t = current_thread()
     # Thread is alive by default
@@ -119,7 +120,8 @@ def run_measurement(event,
     else:
         setpoints = spaces
     ### Filling station for snapshotting
-    fill_station(param_set,param_meas)
+    if snapshot == True:
+        fill_station(param_set,param_meas)
     ### Checking and setting safety rates and delays
     if checkstepinterdelay:
         safetyratesdelays(param_set,spaces)    
@@ -281,7 +283,7 @@ def run_measurement(event,
                 lastprinttime = now
         event.set() # Trigger closing of run_dbextractor
 
-def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
+def run_zerodim(event, param_meas, name, comment, wait_first_datapoint,snapshot):
     # Local reference of THIS thread object
     t = current_thread()
     # Thread is alive by default
@@ -293,7 +295,8 @@ def run_zerodim(event, param_meas, name, comment, wait_first_datapoint):
     meas.name = name
 
     ### Filling station for snapshotting
-    fill_station_zerodim(param_meas)
+    if snapshot == True:
+        fill_station_zerodim(param_meas)
     
     meas.write_period = 0.5
     output = [] 
@@ -370,24 +373,6 @@ def run_dbextractor(event,dbextractor_write_interval):
             #    pass
         time.sleep(dbextractor_write_interval/10)
 
-# doNd: Generalised measurement function able to handle an arbitrary number of param_set axes. 
-# Example:
-# param_set = [set_param1, set_param2, ... etc]
-# spaces = [space1, space2, ... etc]
-    # ! functionality of spaces can be modified by giving the manualsetpoints=True argument
-    # Now, spaces should be a (n,m) dimensional array where 'n' is the number of setpoints and 'm' is the dimensionality of the measurment, i.e.,
-    # every 'n' represents a setpoint in the measurement where 'm' contain a value for all set_parameters
-# settle_times = [settle_time1, settle_time2, ... etc]
-# param_meas = [meas_param1, .. etc]
-# name = 'Name of this measurement'
-# comment = 'More explanation'
-# meander = False/True  ##Sets meandering on first 'slow' axis.
-# extra_cmd = Optional extra command that is run before each measurement paremeter is read out.
-# extra_cmd_val = Optional extra value that of extra_cmd, it will be evaluated as extra_cmd(extra_cmd_val). If extra_cmd_val is not given, extra_cmd() will be run.
-# wait_first_datapoint = number of seconds to wait before measureing the first datapoint
-# checkstepinterdelay = True for False, checks if step and inter_delay have been set for all param_meas
-# doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False, extra_cmd=None, extra_cmd_val=None)
-
 def doNd(param_set, 
          spaces, 
          settle_times, 
@@ -399,7 +384,80 @@ def doNd(param_set,
          extra_cmd_val=None,
          wait_first_datapoint=1,
          checkstepinterdelay=True,
-         manualsetpoints=False):
+         manualsetpoints=False,
+         snapshot=True):
+    '''
+    ----------------------------------------------------------------------------------------------------
+    doNd: Generalised measurement function that is able to handle an arbitrary number of set parameters.
+    ----------------------------------------------------------------------------------------------------
+    
+    Arguments:
+    ----------
+
+    param_set: QCoDeS instrument parameters used for setpoints of measurements. 
+               The fastest axis is on the right, the slowest axis is on the left.
+        - type: list
+        - example: param_set = [set_param1, set_param2, ... etc]
+    ..............................................................................................................
+    spaces: Setpoints corresponding to the parameters in param_set.
+            Functionality of spaces is changed by the manualsetpoints=True argument, see below
+        - type: list of numpy arrays
+        - example: space_set_param1 = np.linspace(0,10,11)
+                   space_set_param2 = np.linspace(-3,3,7)
+                   spaces = [space_set_param1, space_set_param2, ... etc]
+    ..............................................................................................................
+    settle_times: Waiting times in seconds for each datapoint after corresponding param_set have reached 
+                  their destination values.
+        - type: list of floats of length len(param_set)
+        - example: settle_times = [settle_time1, settle_time2, ... etc]
+    ..............................................................................................................
+    param_meas: QCoDeS instrument parameters for which the values are recorded at each datapoint.
+        - type: list
+        - example: param_meas = [meas_param1, .. etc]
+    ..............................................................................................................
+    name: Name of the measurement.
+        - type: string without special characters or spaces
+        - example: name = 'Name of this measurement'
+    ..............................................................................................................
+    comment: Additional remarks, can contain special characters and spaces.
+        - type: string
+        - example:comment = 'More explanation'
+    ..............................................................................................................
+    meander: Use a meandering pattern for setpoints of the fastest and second to fastest measurement axis.
+        - type: boolean
+        - example: meander = False (default)
+    ..............................................................................................................
+    extra_cmd: Optional extra command that is executed before each param_meas is read out
+        - type: list of class instances of functions of length len(param_meas)
+        - example: extra_cmd = [cmd_meas_param1, cmd_meas_param2, ... etc]
+    ..............................................................................................................
+    extra_cmd_val: Optional extra value that of extra_cmd, it will be evaluated as extra_cmd(extra_cmd_val). 
+                   If extra_cmd_val is not given, extra_cmd() will be run.
+        - type: list of class instances of functions of length len(extra_cmd)
+        - example: extra_cmd = [cmd_val_param1, cmd_val_param2, ... etc]
+    ..............................................................................................................
+    wait_first_datapoint: Additional seconds to wait before measuring the first datapoint of the measurement
+        - type: float
+        - example: wait_first_datapoint = 3
+    ..............................................................................................................
+    checkstepinterdelay: Checks if 'step' and 'inter_delay' have been set for all param_set. If not, 'inter_delay' 
+                         is set to 5e-2 s and 'step' is set to the minumum spacing between setpoints of the 
+                         corresponding param_set. Recommended to leave on for safety.
+        - type: Boolean
+        - example: checkstepinterdelay = True (default)
+    ..............................................................................................................
+    manualsetpoints: Modifies functionality of 'spaces'. Now, spaces should be supplied as an (n,m) sized array
+                     containing all setpoints 'n' with param_set values 'm'.
+        - type: Boolean
+        - example: manualsetpoints = False (default)
+    ..............................................................................................................
+    snapshot: Controls taking a snapshot of the parameters of all connected instruments
+        - type: boolean
+        - example: snapshot = True (default) 
+    ..............................................................................................................
+    '''
+
+
     if manualsetpoints == False:
         if len(param_set) is not len(spaces):
             errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of spaces is ' + str(len(spaces)) + '.'
@@ -438,15 +496,17 @@ def doNd(param_set,
                                                         extra_cmd_val, 
                                                         wait_first_datapoint,
                                                         checkstepinterdelay,
-                                                        manualsetpoints))
+                                                        manualsetpoints,
+                                                        snapshot))
         else:
             p1 = Thread(target = run_zerodim, args=(event, 
                                                     param_meas, 
                                                     name, 
                                                     comment,
-                                                    wait_first_datapoint))
+                                                    wait_first_datapoint,
+                                                    snapshot))
         # Set writeinterval db_extractor
-        dbextractor_write_interval = 30 #sec
+        dbextractor_write_interval = 15 #sec
         p2 = Thread(target = run_dbextractor, args=(event,dbextractor_write_interval))
         
         # Kill main thread is subthreads are killed, not necessary here I think..
@@ -486,57 +546,3 @@ def doNd(param_set,
         plot_by_id(measid)
     #sys.exit(0)
     #return measid
-
-# Old do1d/2d functions are now only wrappers converting the parameters to a format compatible with the new doNd function.
-def do1d(param_set, start, stop, num_points, delay=None, param_meas=[], name='', comment=''):
-    warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
-    param_set = [param_set]
-    param_meas = param_meas
-    spaces = [np.linspace(start,stop,num_points)]
-    if delay is not None:
-        warnings.warn('Use of \'delay\' is deprecated and is used as \'settle_time\' in this function.', DeprecationWarning)
-        settle_times = [delay]
-    else:
-        settle_times = [1e-3]
-    measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
-    return measid
-
-def do2d(param_set1, start1, stop1, num_points1, param_set2,  start2, stop2, num_points2,delay1=None, delay2=None, 
-    param_meas=[], name='', comment='', fasttozero=None):
-    warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
-    param_set = [param_set1, param_set2]
-    param_meas = param_meas
-    spaces = [np.linspace(start1, stop1, num_points1), np.linspace(start1, stop1, num_points1)]
-    if delay1 or delay2 is not None:
-        warnings.warn('Use of \'delay\' is deprecated and is used as \'settle_time\' in this function.', DeprecationWarning)
-        settle_times = [delay1,delay2]
-    else:
-        settle_times = [1e-3,1e-3]
-    measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
-    return measid
-
-def do1d_settle(param_set, space, settle_time, delay=None, param_meas=[], name='', comment=''):
-    warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
-    param_set = [param_set]
-    param_meas = param_meas
-    spaces = [space]
-    settle_times = [settle_time]
-    if delay is not None:
-        warnings.warn('Use of \'delay\' is deprecated, sweep rates are controlled by instruments and \'settle_time\' is used for measurement delays.')
-    measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
-    return measid
-
-#More advanced do2d
-#Modified for custom resolution and to wait for settle_time time after every time set_point is set
-#e.g.    space1 = np.concatenate(([1, 2], np.arange(2.5,6.1,0.5), [6.1, 6.2, 6.25, 6.3, 6.5]))
-#        space2 = np.linspace(-2e-6, 2e-6, 1000)
-def do2d_settle(param_set1, space1, settle_time1, param_set2, space2, settle_time2, delay1=None, delay2=None, param_meas=[], name='', comment='', fasttozero=None):
-    warnings.warn(do1d2ddeprecationwarning, DeprecationWarning)
-    param_set = [param_set1, param_set2]
-    param_meas = param_meas
-    spaces = [space1, space2]
-    settle_times = [settle_time1, settle_time2]
-    if delay1 or delay2 is not None:
-        warnings.warn('Use of \'delay\' is deprecated, sweep rates are controlled by instruments and \'settle_time\' is used for measurement delays.', DeprecationWarning)
-    measid = doNd(param_set, spaces, settle_times, param_meas, name='', comment='', meander=False)
-    return measid
