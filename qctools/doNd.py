@@ -156,15 +156,15 @@ def run_measurement(event,
         output[i]= [parameter, None]
         param_measstring += parameter.name + ', '
         param_measnames[i] = parameter.name
-        if isinstance(parameter, qc.instrument.parameter.ParameterWithSetpoints):
+        if isinstance(parameter, qc.instrument.ParameterWithSetpoints):
             param_measunits[i] = parameter.unit
             param_measnames_sub[i] = ''
             paramtype[i] = 'ParameterWithSetpoints'
-        elif isinstance(parameter, qc.instrument.parameter.MultiParameter):
+        elif isinstance(parameter, qc.instrument.MultiParameter):
             param_measunits[i] = parameter.units
             param_measnames_sub[i] = parameter.names
             paramtype[i] = 'MultiParameter'
-        elif isinstance(parameter, qc.instrument.parameter.Parameter):
+        elif isinstance(parameter, qc.instrument.Parameter):
             param_measunits[i] = parameter.unit
             paramtype[i] = 'Parameter'
 
@@ -234,7 +234,7 @@ def run_measurement(event,
                             valsparsed[l] = f"{y:.{6}}"
                     outputparsed[k] = tabulate(list(zip(param_measnames_sub[k],valsparsed,param_measunits[k])), tablefmt='plain', colalign=('left','left','left'))
                 if paramtype[k] == 'Parameter':
-                    outputparsed[k] = tabulate([[f"{x:.{6}}",param_measunits[k]]], tablefmt='plain')
+                    outputparsed[k] = tabulate([[f"{float(x):.{6}}",param_measunits[k]]], tablefmt='plain')
                 if paramtype[k] == 'ParameterWithSetpoints':
                     outputparsed[k] = '{Parameter with setpoints, not shown.}'
             measvals = list(zip(param_measnames,outputparsed))
