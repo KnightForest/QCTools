@@ -206,8 +206,11 @@ def run_measurement(event,
             for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
                 if extra_cmd is not None: # Optional extra command + value that is run before each measurement paremeter is read out.
                     if extra_cmd[k] is not None:
-                        if extra_cmd_val[k] is not None:
-                            (extra_cmd[k])(extra_cmd_val[k])
+                        if extra_cmd_val is not None: 
+                            if extra_cmd_val[k] is not None:
+                                (extra_cmd[k])(extra_cmd_val[k])
+                            else:
+                                (extra_cmd[k])()
                         else:
                             (extra_cmd[k])()
                 output[k][1] = parameter.get()

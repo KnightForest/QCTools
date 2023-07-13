@@ -23,7 +23,7 @@ class setparam_meta(qc.Parameter):
     
     def set_raw(self, setval):
         if abs(setval) > self._maxVal:
-            raise Exception("Error: Set value is limited to {:f}".format(self._maxVal))
+            raise Exception("Error: Set value is limited to {:e}".format(self._maxVal))
         else:
             raw_setval = setval / self._scale_param
             self._instrument_channel.set(raw_setval)
