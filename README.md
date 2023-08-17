@@ -3,14 +3,14 @@
 
 Go into the project folder and type:
 ```
-python setup.py install
+pip install {path to package}
 ```
-If you're feeling frisky
+For an editable install (recommended for easy repository updates):
 ```
-python setup.py develop
+pip install -e {path to package}
 ```
-installs in develop mode and the project folder is where the module
-lives. Any editing done will immediately carry over.
+Now, the project folder is where the module lives. 
+Any editing done will immediately carry over.
 
 
 ## Usage
