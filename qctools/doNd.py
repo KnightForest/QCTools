@@ -12,9 +12,6 @@ import sys
 from IPython.display import display, clear_output
 from tabulate import tabulate
 
-warnings.simplefilter('always', DeprecationWarning)
-do1d2ddeprecationwarning = '\'do1d\' and \'do2d\' are deprecated and call the general doNd function as a variable wrapper. Please consider directly calling \'doNd\'.'
-
 # function to get unique values 
 def unique(list1): 
   
