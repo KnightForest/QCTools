@@ -10,6 +10,6 @@ setup(name='qctools',
       packages=['qctools'],
       install_requires=[
           'qcodes',
-          'jupyter notebook'
+          'lab'
       ],
       zip_safe=False)
