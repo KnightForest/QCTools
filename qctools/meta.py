@@ -2,6 +2,7 @@
 import qcodes as qc
 import numpy as np
 import time
+import sys
 class setparam_meta(qc.Parameter):
     def __init__(self, name, label, scale_param, instrument, maxVal, unit, inter_delay, step):
         super().__init__(name = name, unit=unit)
@@ -41,6 +42,25 @@ class getparam_meta(qc.Parameter):
         if type(raw_getval) == tuple: # Dirty fix for instrument parameters that return tuples
             raw_getval = raw_getval[0]
         getval = raw_getval * self._scale_param
+        return getval
+    
+class getparam_compliance_meta(qc.Parameter):
+    def __init__(self, name, label, scale_param, instrument, unit, compliance):
+        super().__init__(name = name, unit=unit)
+        self.label = label
+        self._scale_param = float(scale_param)
+        self._instrument_channel = instrument
+        self.metadata = instrument.full_name
+        self.compliance = compliance
+
+    def get_raw(self):
+        raw_getval = self._instrument_channel.get()
+        if type(raw_getval) == tuple: # Dirty fix for instrument parameters that return tuples
+            raw_getval = raw_getval[0]
+        getval = raw_getval * self._scale_param
+        if getval > self.compliance:
+            print('Compliance reached.')
+            sys.exit()
         return getval
 
 # Define a class for reading out the lockin (read X,Y and convert to R and G) for voltage bias measurement
