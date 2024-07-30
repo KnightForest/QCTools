@@ -59,8 +59,8 @@ class getparam_compliance_meta(qc.Parameter):
             raw_getval = raw_getval[0]
         getval = raw_getval * self._scale_param
         if getval > self.compliance:
-            print('Compliance reached.')
-            sys.exit()
+            print('Compliance reached: ', getval)
+            sys.exit(0)
         return getval
 
 # Define a class for reading out the lockin (read X,Y and convert to R and G) for voltage bias measurement
