@@ -385,7 +385,8 @@ def doNd(param_set,
          wait_first_datapoint=1,
          checkstepinterdelay=True,
          manualsetpoints=False,
-         snapshot=True):
+         snapshot=True,
+         do_plot=True):
     '''
     ----------------------------------------------------------------------------------------------------
     doNd: Generalised measurement function that is able to handle an arbitrary number of set parameters.
@@ -540,7 +541,7 @@ def doNd(param_set,
                                        no_folders=False,
                                        suppress_output=True,
                                        useopendbconnection = True)
-    if len(param_set) > 2:
+    if len(param_set) > 2 or not do_plot:
         print('QCoDeS currently does not support plotting of higher dimensional data, plotting skipped.')
     else:
         plot_by_id(measid)
