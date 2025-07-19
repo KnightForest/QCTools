@@ -15,7 +15,8 @@ license = "MIT"
 dependencies = [
   "qcodes",
   "jupyter",
-  "lab"
+  "lab",
+  "pyqt6"
 ]
 
 [project.urls]
