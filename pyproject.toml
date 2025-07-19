@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qctools"
+version = "0.1"
+description = "Extension module for measuring with qcodes"
+authors = [
+  { name = "KnightForest", email = "joostridderbos@hotmail.com" }
+]
+readme = ""
+requires-python = ">=3.7"
+license = "MIT"
+dependencies = [
+  "qcodes",
+  "jupyter",
+  "lab"
+]
+
+[project.urls]
+Homepage = "https://github.com/KnightForest/QCTools"
