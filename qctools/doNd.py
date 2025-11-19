@@ -11,6 +11,7 @@ import warnings
 import sys
 from IPython.display import display, clear_output
 from tabulate import tabulate
+import interruptingcow
 
 # function to get unique values 
 def unique(list1): 
@@ -26,7 +27,6 @@ def unique(list1):
     return unique_list 
 
 def fill_station(param_set, param_meas):
-    to=1
     station = Station()
     allinstr=qc.instrument.base.Instrument._all_instruments
     for key,val in allinstr.items():
@@ -165,6 +165,7 @@ def run_measurement(event,
         elif isinstance(parameter, qc.instrument.Parameter):
             param_measunits[i] = parameter.unit
             paramtype[i] = 'Parameter'
+
 
     # Start measurement routine
     with meas.run() as datasaver:  
@@ -475,6 +476,12 @@ def doNd(param_set,
     if len(param_set) is not len(settle_times):
         errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of settle_times is ' + str(len(settle_times)) + '.' 
         sys.exit(errstr)
+    # check if set params are within safety bounds
+    for i,param in enumerate(param_set):
+        if np.max(np.abs(spaces[i]))>np.abs(param._maxVal):
+            errstr = 'Error: ' +param.name + ' is out of bounds with maxVal '+ str(param._maxVal) + '.' 
+            sys.exit(errstr)
+        
     # Register measid as global parameter
     global measid
     measid = None

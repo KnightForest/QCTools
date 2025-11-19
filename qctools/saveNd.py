@@ -89,3 +89,17 @@ def saveNd(data=np.array([None]),meas_name='measurement_name',comment='',data_na
             dataset.add_metadata('snapshot',new_snap)
     
     return measid
+    
+def add_to_snapshot(measid,config_snap={}):
+    #adds a dictionary to the json snapshot of the dataset with id measid
+    if config_snap==None:
+        warnings.warn('Config file is not saved in snapshot. Please supply config as parameter config_snap.')
+    else:
+        #if :
+            #Add config_file (supplied by user) to the Qcodes snapshot
+        dataset=load_by_id(measid)
+        old_snap_json = dataset.snapshot_raw
+        
+        new_snap=old_snap_json[:-1]+', "config":' +json.dumps(config_snap)+ "}"
+        print(new_snap)
+        dataset.add_metadata('snapshot',new_snap)
