@@ -176,7 +176,8 @@ def db_extractor(dbloc=None,
                     continue
 
                 # --- Build the .dat file header ---
-                header = (f'Run #{runid}: {runname}, Experiment: {expname}, '
+                runname_header = runname.replace(',',';')
+                header = (f'Run #{runid}: {runname_header}, Experiment: {expname}, '
                           f'Sample name: {samplename}, '
                           f'Number of values: {run.number_of_results}, '
                           f'Samplingrate (n/s): {samplerate},\n')
