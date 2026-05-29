@@ -70,7 +70,7 @@ def db_extractor(dbloc=None,
             run = exp.data_set(j)
             runid = run.run_id
             #print('Runid',runid)
-            runname = run.name
+            runname = run.name.replace(':','_').replace('.','_')
             
             #Loadin a new run
             if (not ids or runid in ids) and (run.number_of_results > 0):
@@ -126,30 +126,30 @@ def db_extractor(dbloc=None,
                     
                     #If number of files > 1, add a number in front
                     if len(result_dict) > 1:
-                        filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
+                        filenamep2 = str(n) + "_" + runname + runparams + ".dat"
                         filenamejson = "run_snapshot.json"
                     else:
-                        filenamep2 = run.name + "_" + runparams + ".dat"
+                        filenamep2 = runname + "_" + runparams + ".dat"
                         filenamejson = "run_snapshot.json"
                     
                     #Constructing final filepath
-                    filenamep1 = "{:03d}".format(runid) + '_' + timestampcut + '_' + run.name 
+                    filenamep1 = "{:03d}".format(runid) + '_' + timestampcut + '_' + runname 
                     if no_folders == True:
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
-                            filenamep2 = '{:03d}'.format(runid) + '-' + str(n) + "_" + run.name + runparams + ".dat"
+                            filenamep2 = '{:03d}'.format(runid) + '-' + str(n) + "_" + runname + runparams + ".dat"
                             filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
                         else:
-                            filenamep2 = '{:03d}'.format(runid) + '-' + run.name + runparams + ".dat"
+                            filenamep2 = '{:03d}'.format(runid) + '-' + runname + runparams + ".dat"
                             filenamejson = '{:03d}'.format(runid) + '-' + "run_snapshot.json"
                         folder = (dbpath.split('.')[0])
                     else:
                         #If number of files > 1, add a number in front
                         if len(result_dict) > 1:
-                            filenamep2 = str(n) + "_" + run.name + runparams + ".dat"
+                            filenamep2 = str(n) + "_" + runname + runparams + ".dat"
                             filenamejson = "run_snapshot.json"
                         else:
-                            filenamep2 = run.name + runparams + ".dat"
+                            filenamep2 = runname + runparams + ".dat"
                             filenamejson = "run_snapshot.json"
                         folder = os.path.join((dbpath.split('.')[0]),folderstring,filenamep1)
                     
