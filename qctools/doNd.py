@@ -1,5 +1,6 @@
 import qcodes as qc
 from qcodes import Station, Measurement
+from qcodes.instrument import Instrument
 from qcodes.dataset.plotting import plot_by_id
 import qctools
 import time
@@ -8,28 +9,13 @@ import datetime
 from threading import Thread, current_thread
 from multiprocessing import Process, Event
 import warnings
-import sys
 from IPython.display import display, clear_output
 from tabulate import tabulate
 
-# function to get unique values 
-def unique(list1): 
-  
-    # intilize a null list 
-    unique_list = [] 
-      
-    # traverse for all elements 
-    for x in list1: 
-        # check if exists in unique_list or not 
-        if x not in unique_list: 
-            unique_list.append(x) 
-    return unique_list 
-
 def fill_station(param_set, param_meas):
     station = Station()
-    allinstr=qc.instrument.base.Instrument._all_instruments
-    for key,val in allinstr.items():
-        instr = qc.instrument.base.Instrument.find_instrument(key)
+    for key in Instrument._all_instruments:
+        instr = Instrument.find_instrument(key)
         station.add_component(instr)
     measparstring = ""
     for parameter in param_set:
@@ -46,9 +32,8 @@ def fill_station(param_set, param_meas):
 
 def fill_station_zerodim(param_meas):
     station = Station()
-    allinstr=qc.instrument.base.Instrument._all_instruments
-    for key,val in allinstr.items():
-        instr = qc.instrument.base.Instrument.find_instrument(key)
+    for key in Instrument._all_instruments:
+        instr = Instrument.find_instrument(key)
         station.add_component(instr)
     measparstring = ""
     for parameter in param_meas:
@@ -314,43 +299,40 @@ def run_zerodim(event, param_meas, name, comment, wait_first_datapoint,snapshot)
 
         # Start various timers
         starttime = datetime.datetime.now()
-        l1 = tabulate([['----------------------' ,'-------------------------------------------------'],
-                       ['Running 0-dimensional measurement,', 'time estimation not available.'], # Time estimation now in properly aligned table format
-                       ['Starting runid:', str(measid)], # Time estimation now in properly aligned table format
-                       ['Name:', name], 
-                       ['Comment:', comment],
-                       ['Starting runid:', str(measid)],
-                       ['Readout parameter(s):', str(param_measstring)],
-                       ['______________________' ,'_________________________________________________'],
-                       ['Started: ' + starttime.strftime('%Y-%m-%d'), starttime.strftime('%H:%M:%S')],
-                       ], colalign=('right','left'), tablefmt='plain')
-        print(l1)
+        
+        # Build the static rows once, reused for both the start and finish table
+        sep = '----------------------'
+        static_rows = [
+            [sep, '-------------------------------------------------'],
+            ['Running 0-dimensional measurement,', 'time estimation not available.'],
+            ['Starting runid:', str(measid)],
+            ['Name:', name],
+            ['Comment:', comment],
+            ['Readout parameter(s):', param_measstring],
+            [sep.replace('-', '_'), '_________________________________________________'],
+            ['Started: ' + starttime.strftime('%Y-%m-%d'), starttime.strftime('%H:%M:%S')],
+        ]
+        print(tabulate(static_rows, colalign=('right', 'left'), tablefmt='plain'))
 
         # Getting dimensions and array dimensions and lengths
         # Main loop for setting values
-        #Check for nonzero axis to apply new setpoints by looking in changesetpoints arrays
         time.sleep(wait_first_datapoint)
-        resultlist = [None]*1
         for k, parameter in enumerate(param_meas): # Readout all measurement parameters at this setpoint i
                 output[k][1] = parameter.get()                
         datasaver.add_result(*output)
         datasaver.dataset.add_metadata('Comment', comment) # Add comment to metadata in database
+        
         now = datetime.datetime.now()
         elapsed_in_sec = (now-starttime).total_seconds()
         clear_output(wait=True)
-        l1 = tabulate([['---------------------------------' ,'-------------------------------------------'],
-                       ['Running 0-dimensional measurement,', 'time estimation not available.'], # Time estimation now in properly aligned table format
-                       ['Starting runid:', str(measid)], # Time estimation now in properly aligned table format
-                       ['Name:', name], 
-                       ['Comment:', comment],
-                       ['Starting runid:', str(measid)],
-                       ['Readout parameter(s):', str(param_measstring)],
-                       ['_________________________________' ,'___________________________________________'],
-                       ['Started: ' + starttime.strftime('%Y-%m-%d'), starttime.strftime('%H:%M:%S')],
-                       ['Finished: ' + str((now).strftime('%Y-%m-%d')),str((now).strftime('%H:%M:%S'))],
-                       ['Total duration:', str(datetime.timedelta(seconds=np.round(elapsed_in_sec)))],
-                       ], colalign=('right','left'), tablefmt='plain')
-        print(l1)
+        
+        # Extend static rows with completion info
+        finished_rows = static_rows + [
+            ['Finished: ' + now.strftime('%Y-%m-%d'), now.strftime('%H:%M:%S')],
+            ['Total duration:', str(datetime.timedelta(seconds=round(elapsed_in_sec)))],
+        ]
+        print(tabulate(finished_rows, colalign=('right', 'left'), tablefmt='plain'))
+
         event.set() # Trigger closing of run_dbextractor
 
 def run_dbextractor(event,dbextractor_write_interval):
@@ -385,7 +367,8 @@ def doNd(param_set,
          wait_first_datapoint=1,
          checkstepinterdelay=True,
          manualsetpoints=False,
-         snapshot=True):
+         snapshot=True,
+         do_plot=True):
     '''
     ----------------------------------------------------------------------------------------------------
     doNd: Generalised measurement function that is able to handle an arbitrary number of set parameters.
@@ -459,20 +442,20 @@ def doNd(param_set,
 
 
     if manualsetpoints == False:
-        if len(param_set) is not len(spaces):
+        if len(param_set) != len(spaces):
             errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of spaces is ' + str(len(spaces)) + '.'
-            sys.exit(errstr)
+            raise ValueError(errstr)
     if manualsetpoints == True:
         if isinstance(spaces,np.ndarray) == False:
             errstr = 'Error: spaces is of type '+ str(type(spaces)) +' not a numpy error as required when manualsetpoints=True.'    
-            sys.exit(errstr)
-        elif len(param_set) is not spaces.shape[1]:
+            raise ValueError(errstr)
+        elif len(param_set) != spaces.shape[1]:
             errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while dimension of spaces array is ' + str(spaces.shape[1]) + '.'
-            sys.exit(errstr)
+            raise ValueError(errstr)
     
-    if len(param_set) is not len(settle_times):
+    if len(param_set) != len(settle_times):
         errstr = 'Error: number of param_set is ' + str(len(param_set)) + ', while number of settle_times is ' + str(len(settle_times)) + '.' 
-        sys.exit(errstr)
+        raise ValueError(errstr)
     # Register measid as global parameter
     global measid
     measid = None
@@ -523,6 +506,7 @@ def doNd(param_set,
                 # Try to join the child thread back to parent for 0.5 seconds
                 p1.join(0.5)
                 p2.join(0.5)
+            p2.join()
         # When kernel interrupt is received (as keyboardinterrupt)
         except KeyboardInterrupt as e:
             # Set the alive attribute to false
@@ -532,7 +516,7 @@ def doNd(param_set,
             p1.join()
             p2.join(5)
             # Exit with error code
-            sys.exit(e)
+            raise ValueError(e)
     qctools.db_extraction.db_extractor(dbloc = qc.dataset.sqlite.database.get_DB_location(), 
                                        ids=[measid], 
                                        overwrite=True,
@@ -540,9 +524,8 @@ def doNd(param_set,
                                        no_folders=False,
                                        suppress_output=True,
                                        useopendbconnection = True)
-    if len(param_set) > 2:
+    if len(param_set) > 2 or not do_plot:
         print('QCoDeS currently does not support plotting of higher dimensional data, plotting skipped.')
     else:
         plot_by_id(measid)
-    #sys.exit(0)
     #return measid
