@@ -129,8 +129,10 @@ def saveNd(data=np.array([None]),meas_name='measurement_name',comment='',data_na
     if save_data_to_h5:
         # Save data to HDF5 and create a metadata-only placeholder in QCoDeS.
         if type(data.flat[0]) not in (np.complex128, np.float64):
-            print('Please supply data as nd array of type np.float64 or np.complex128.')
-            return None
+            raise TypeError(
+                'save_data_to_h5=True requires data as an nd array of dtype '
+                'np.float64 or np.complex128, got element type '
+                f'{type(data.flat[0]).__name__} (data.dtype={data.dtype}).')
 
         # Step 1: Create QCoDeS placeholder entry first so we have measid, timestamp, exp info.
         # A dummy setpoint is required so depends_on is non-empty and db_extractor picks up the entry.
@@ -247,8 +249,10 @@ def saveNd(data=np.array([None]),meas_name='measurement_name',comment='',data_na
               comment=comment,
               name=meas_name,do_plot=do_plot)
     else:
-        print('Please supply data as nd array of type np.float64 or np.complex128.')
-        return None
+        raise TypeError(
+            'saveNd requires data as an nd array of dtype np.float64 or '
+            f'np.complex128, got element type {type(data.flat[0]).__name__} '
+            f'(data.dtype={data.dtype}).')
     if config_snap==None:
         warnings.warn('Config file is not saved in snapshot. Please supply config as parameter config_snap.')
     else:
