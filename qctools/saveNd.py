@@ -11,6 +11,17 @@ import h5py
 import pandas as pd
 
 
+def _long_path(path):
+    # Windows silently fails to open paths longer than MAX_PATH (260 chars)
+    # with FileNotFoundError, even though every parent directory exists. The
+    # \\?\ prefix opts a single call out of that limit without requiring the
+    # LongPathsEnabled registry setting.
+    path = os.path.abspath(path)
+    if os.name == 'nt' and not path.startswith('\\\\?\\'):
+        return '\\\\?\\' + path
+    return path
+
+
 def _write_placeholder_dat(folder, measid, meas_name, comment,
                            set_names, set_vals, set_units,
                            data_name, data_unit, exp_name, sample_name, snap_dict):
@@ -65,7 +76,7 @@ def _write_placeholder_dat(folder, measid, meas_name, comment,
     dat_path  = os.path.join(folder, meas_name + '_placeholder.dat')
     json_path = os.path.join(folder, 'run_snapshot.json')
 
-    with open(dat_path, 'wb') as f:
+    with open(_long_path(dat_path), 'wb') as f:
         np.savetxt(f, np.array([]), header=header)
         vsliced = np.split(run_matrix, slicearray, axis=0)
         for k, block in enumerate(vsliced):
@@ -76,14 +87,14 @@ def _write_placeholder_dat(folder, measid, meas_name, comment,
     # If db_extractor already wrote a full run_snapshot.json (station snapshot),
     # load it and only overwrite the interdependencies so tessierplot can parse
     # _placeholder.dat. Otherwise fall back to building from snap_dict.
-    if os.path.isfile(json_path):
-        with open(json_path, 'r') as f:
+    if os.path.isfile(_long_path(json_path)):
+        with open(_long_path(json_path), 'r') as f:
             total_json = json.load(f)
         total_json['interdependencies'] = {'paramspecs': paramspecs}
     else:
         total_json = {'interdependencies': {'paramspecs': paramspecs}}
         total_json.update(snap_dict)
-    with open(json_path, 'w') as f:
+    with open(_long_path(json_path), 'w') as f:
         json.dump(total_json, f, indent=4)
 
 
@@ -156,11 +167,11 @@ def saveNd(data=np.array([None]),meas_name='measurement_name',comment='',data_na
         timestampcut = str(dataset.run_timestamp()).replace(':', '').replace('-', '').replace(' ', '-')
         filenamep1 = '{:03d}_{}_{}'.format(measid, timestampcut, meas_name)
         folder = os.path.join(dbpath.split('.')[0], folderstring, filenamep1)
-        os.makedirs(folder, exist_ok=True)
+        os.makedirs(_long_path(folder), exist_ok=True)
         h5_filepath = os.path.join(folder, meas_name + '.h5')
 
         # Step 3: Save data to HDF5.
-        with h5py.File(h5_filepath, 'w') as f:
+        with h5py.File(_long_path(h5_filepath), 'w') as f:
             f.attrs['meas_name'] = meas_name
             f.attrs['comment'] = comment
             f.attrs['data_name'] = data_name
@@ -207,8 +218,8 @@ def saveNd(data=np.array([None]),meas_name='measurement_name',comment='',data_na
         # (placeholder_idx / h5_path_ref columns); _placeholder.dat replaces it.
         db_extractor_dat = os.path.join(
             folder, meas_name.replace(' ', '_').replace('?', '_') + '.dat')
-        if os.path.isfile(db_extractor_dat):
-            os.remove(db_extractor_dat)
+        if os.path.isfile(_long_path(db_extractor_dat)):
+            os.remove(_long_path(db_extractor_dat))
 
         # Step 6: Write the placeholder .dat and overwrite run_snapshot.json with
         # correct interdependencies so tessierplot can parse _placeholder.dat.
