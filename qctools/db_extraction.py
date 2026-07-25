@@ -6,6 +6,17 @@ import numpy as np
 import json
 import datetime
 
+
+def _long_path(path):
+    # Windows silently fails to open paths longer than MAX_PATH (260 chars)
+    # with FileNotFoundError, even though every parent directory exists. The
+    # \\?\ prefix opts a single call out of that limit without requiring the
+    # LongPathsEnabled registry setting.
+    path = os.path.abspath(path)
+    if os.name == 'nt' and not path.startswith('\\\\?\\'):
+        return '\\\\?\\' + path
+    return path
+
 # Extract *.db file into conventient folder structure with proper naming. Extracts measurement snapshots if available
 
 # You can pass the function the following attributes:
@@ -159,15 +170,15 @@ def db_extractor(dbloc=None,
                     filenamejson = filenamejson.replace(" ", "_").replace('?','_')
                     fullpath = os.path.join(folder,filenamep2)
                     fullpathjson = os.path.join(folder,filenamejson)
-                    if not os.path.exists(folder):
-                        os.makedirs(folder) 
+                    if not os.path.exists(_long_path(folder)):
+                        os.makedirs(_long_path(folder))
 
                     if checktimes:
                         times.append(datetime.datetime.now())
                         print('Constructing file and folder names ' ,times[-1]-times[-2])
                     
                     #Check if file exists already
-                    if os.path.isfile(fullpath) and overwrite == False:
+                    if os.path.isfile(_long_path(fullpath)) and overwrite == False:
                         #print('File found, skipping extraction')
                         pass
                     else:
@@ -243,8 +254,8 @@ def db_extractor(dbloc=None,
                             print("Saving measurement with id " + str(runid) +  " to  "+ fullpath)
                         
                         # Actual saving of file
-                        file = fullpath                      
-                        f = open(file, "wb")
+                        file = fullpath
+                        f = open(_long_path(file), "wb")
                         np.savetxt(f,np.array([]), header = header)
 
                         if checktimes:
@@ -272,7 +283,7 @@ def db_extractor(dbloc=None,
                             print('Writing of the textfile ',times[-1]-times[-2])
 
                         # Saving of snapshot + run description to JSON file
-                        with open(fullpathjson, 'w') as f:
+                        with open(_long_path(fullpathjson), 'w') as f:
                             if run.snapshot and run.description:
                                 total_json = {**json.loads(sz.to_json_for_storage(run.description)), **run.snapshot}
                             if not run.snapshot:
