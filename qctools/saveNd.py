@@ -205,8 +205,11 @@ def saveNd(data=np.array([None]),meas_name='measurement_name',comment='',data_na
 
         # Step 5: Run db_extractor on the placeholder entry to write the full
         # QCoDeS station snapshot to run_snapshot.json.
-        import qctools
-        qctools.db_extraction.db_extractor(
+        # Import via the QCTools package explicitly (not bare `import qctools`)
+        # so this always resolves to this same package, even if another
+        # `qctools` folder happens to sit earlier on sys.path.
+        import QCTools.qctools.db_extraction as db_extraction
+        db_extraction.db_extractor(
             dbloc=qc.dataset.sqlite.database.get_DB_location(),
             ids=[measid],
             overwrite=True,
