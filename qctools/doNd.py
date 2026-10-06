@@ -1,5 +1,6 @@
 import qcodes as qc
-from qcodes import Station, Measurement
+from qcodes.station import Station
+from qcodes.dataset import Measurement
 from qcodes.instrument import Instrument
 from qcodes.dataset.plotting import plot_by_id
 import qctools

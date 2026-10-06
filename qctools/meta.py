@@ -3,7 +3,7 @@ import qcodes as qc
 import numpy as np
 import time
 import sys
-class setparam_meta(qc.Parameter):
+class setparam_meta(qc.parameters.Parameter):
     def __init__(self, name, label, scale_param, instrument, maxVal, unit, inter_delay, step):
         super().__init__(name = name, unit=unit)
         self.label = label
@@ -29,7 +29,7 @@ class setparam_meta(qc.Parameter):
             raw_setval = setval / self._scale_param
             self._instrument_channel.set(raw_setval)
 
-class getparam_meta(qc.Parameter):
+class getparam_meta(qc.parameters.Parameter):
     def __init__(self, name, label, scale_param, instrument, unit):
         super().__init__(name = name, unit=unit)
         self.label = label
@@ -44,7 +44,7 @@ class getparam_meta(qc.Parameter):
         getval = raw_getval * self._scale_param
         return getval
     
-class getparam_compliance_meta(qc.Parameter):
+class getparam_compliance_meta(qc.parameters.Parameter):
     def __init__(self, name, label, scale_param, instrument, unit, compliance):
         super().__init__(name = name, unit=unit)
         self.label = label
@@ -66,7 +66,7 @@ class getparam_compliance_meta(qc.Parameter):
 # Define a class for reading out the lockin (read X,Y and convert to R and G) for voltage bias measurement
 # dI/dV
 # Returns the resistance (R), conductance (G), X, Y lockin values, AC current 
-class diff_R_G_Vbias(qc.MultiParameter):
+class diff_R_G_Vbias(qc.parameters.MultiParameter):
     def __init__(self, 
                  lockin_handle, 
                  V_div, 
@@ -111,7 +111,7 @@ class diff_R_G_Vbias(qc.MultiParameter):
 # Define a class for reading out the lockin (X,Y at the same time and convert to R and G)
 # dV/dI
 # Returns the resistance (R), conductance (G), X and Y lockin values
-class diff_R_G_Ibias(qc.MultiParameter):
+class diff_R_G_Ibias(qc.parameters.MultiParameter):
     def __init__(self, 
                  lockin_handle, 
                  R_pre, 
@@ -169,7 +169,7 @@ def auto_sensitivity(self, ntc, lim):
         X_val = self.X.get()  
 # Multigate parameter class
 
-class multi_instrument_set(qc.Parameter):
+class multi_instrument_set(qc.parameters.Parameter):
     def __init__(self, 
                  name, 
                  label, 
@@ -224,7 +224,7 @@ class multi_instrument_set(qc.Parameter):
             for k in range(self._length):
                 self._instrument_channel[k].set(raw_setval[k])
 
-class multi_instrument_get(qc.MultiParameter):
+class multi_instrument_get(qc.parameters.MultiParameter):
     def __init__(self, name, names, labels, scale_param, instrument, units):
         super().__init__(name=name, names = names, units = units, labels = labels, shapes = ( (),)*len(instrument), setpoints =( (),)*len(instrument) ) 
         #self.names = names

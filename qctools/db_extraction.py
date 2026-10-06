@@ -1,7 +1,7 @@
 from qcodes.dataset.sqlite.database import connect, get_DB_location
 from qcodes.dataset import get_default_experiment_id
 import qcodes as qc
-from qcodes import initialise_database
+from qcodes.dataset import initialise_database
 import qcodes.dataset.descriptions.versioning.serialization as sz
 import os
 import numpy as np
